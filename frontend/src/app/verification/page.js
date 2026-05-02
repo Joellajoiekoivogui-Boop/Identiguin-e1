@@ -17,21 +17,12 @@ function StatutBanner({ statut }) {
   const c = STATUTS[statut] || STATUTS.INVALIDE;
   return (
     <div style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 6, padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
-      <span style={{ fontSize: 24, flexShrink: 0 }}>{c.icon}</span>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>{c.icon}</span>
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color: c.text, letterSpacing: '0.04em' }}>{c.label}</div>
         {statut === 'RÉVOQUÉ' && <p style={{ fontSize: 11, color: c.text, marginTop: 3, opacity: 0.8 }}>Ce document a été révoqué. Utilisez le document de remplacement fourni.</p>}
-        {statut === 'EXPIRÉ'  && <p style={{ fontSize: 11, color: c.text, marginTop: 3, opacity: 0.8 }}>Ce document est expiré. Procédez au renouvellement ci-dessous.</p>}
+        {statut === 'EXPIRÉ'  && <p style={{ fontSize: 11, color: c.text, marginTop: 3, opacity: 0.8 }}>Ce document est expiré. Procédez au renouvellement.</p>}
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, mono, warn }) {
-  return (
-    <div style={{ padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 13, color: warn ? '#92400E' : '#0F172A', fontWeight: 500, fontFamily: mono ? 'JetBrains Mono, monospace' : undefined }}>{value}</div>
     </div>
   );
 }
@@ -69,26 +60,22 @@ function VerifContenu() {
         {/* Titre */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ height: 3, width: 48, background: 'linear-gradient(to right,#CE1126,#FCD116,#009460)', borderRadius: 2, marginBottom: 14 }} />
-          <h1 className="font-display" style={{ fontSize: 28, fontWeight: 700, color: '#0F172A', marginBottom: 6 }}>
+          <h1 className="font-display" style={{ fontSize: 'clamp(22px,4vw,28px)', fontWeight: 700, color: '#0F172A', marginBottom: 6 }}>
             Vérification de document
           </h1>
-          <p style={{ fontSize: 13, color: '#64748B' }}>
-            Confirmez instantanément l'authenticité d'un document IdentiGuinée.
-          </p>
+          <p style={{ fontSize: 13, color: '#64748B' }}>Confirmez instantanément l'authenticité d'un document IdentiGuinée.</p>
         </div>
 
         {/* Champ de recherche */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <label className="field-label" style={{ marginBottom: 10 }}>
-            Identifiant unique du document
-          </label>
-          <form onSubmit={e => { e.preventDefault(); doVerif(); }} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+          <label className="field-label" style={{ marginBottom: 10 }}>Identifiant unique du document</label>
+          <form onSubmit={e => { e.preventDefault(); doVerif(); }} style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
             <input
               type="text" value={id}
               onChange={e => setId(e.target.value.toUpperCase())}
               placeholder="GN-2026-XXXXXX"
               className="field-input font-mono-ig"
-              style={{ flex: 1, fontSize: 15, letterSpacing: '0.05em' }}
+              style={{ flex: '1 1 200px', fontSize: 15, letterSpacing: '0.05em' }}
             />
             <button type="submit" disabled={loading} className="btn btn-primary" style={{ flexShrink: 0, padding: '10px 20px' }}>
               {loading ? '…' : 'Vérifier'}
@@ -127,7 +114,7 @@ function VerifContenu() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#0F2544', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
                   Informations du titulaire
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
+                <div className="verif-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
                   {[
                     { l: 'Nom complet',       v: `${result.titulaire.prenoms} ${(result.titulaire.nom || '').toUpperCase()}` },
                     { l: 'Date de naissance', v: result.titulaire.dateNaissance },
@@ -135,7 +122,12 @@ function VerifContenu() {
                     { l: 'Type de document',  v: result.type === 'carte' ? "🪪 Carte d'Identité" : '📕 Passeport' },
                     { l: "Date d'émission",   v: result.dateEmission },
                     { l: "Date d'expiration", v: result.dateExpiration, warn: result.statut !== 'VALIDE' },
-                  ].map(r => <Row key={r.l} label={r.l} value={r.v} warn={r.warn} />)}
+                  ].map(r => (
+                    <div key={r.l} style={{ padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>{r.l}</div>
+                      <div style={{ fontSize: 13, color: r.warn ? '#92400E' : '#0F172A', fontWeight: 500 }}>{r.v}</div>
+                    </div>
+                  ))}
                 </div>
 
                 {result.renouvellementDe && (
@@ -145,7 +137,7 @@ function VerifContenu() {
                 )}
 
                 {result.valide && (
-                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #F1F5F9', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <div className="verif-btns" style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #F1F5F9', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <a href={`${API}/api/documents/pdf/${result.documentId}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: 12, padding: '8px 16px' }}>
                       ⬇ Télécharger le PDF
                     </a>
@@ -166,7 +158,7 @@ function VerifContenu() {
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Hash SHA-256</div>
                   <div className="hash-display">{result.blockchain.hash}</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                <div className="rg-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
                   {[
                     { l: 'Bloc',      v: `#${result.blockchain.blockIndex}`, c: '#059669' },
                     { l: 'Intégrité', v: result.blockchain.integrite ? '✓ Intact' : '✗ Altéré', c: result.blockchain.integrite ? '#059669' : '#DC2626' },
@@ -206,13 +198,22 @@ function VerifContenu() {
           <QRScanner onScan={onScan} onFermer={() => setScanner(false)} />
         </Suspense>
       )}
+
+      <style>{`
+        @media (max-width: 520px) {
+          .verif-grid { grid-template-columns: 1fr !important; }
+          .verif-btns { flex-direction: column !important; }
+          .verif-btns a { text-align: center; }
+          .rg-3 { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
 export default function VerificationPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>Chargement…</div>}>
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', background: '#F5F7FA' }}>Chargement…</div>}>
       <VerifContenu />
     </Suspense>
   );

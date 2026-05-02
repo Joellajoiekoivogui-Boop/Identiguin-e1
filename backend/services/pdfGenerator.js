@@ -43,10 +43,8 @@ function mrzLine(str, len) {
 
 async function generer(data) {
   return new Promise((resolve, reject) => {
-    const isPP = data.type === 'passeport';
-    const opts = isPP
-      ? { size: 'A4',         margins: { top: 0, bottom: 0, left: 0, right: 0 } }
-      : { size: [612, 390],   margins: { top: 0, bottom: 0, left: 0, right: 0 } };
+    // Les deux formats utilisent le même gabarit carte paysage [612 × 390]
+    const opts = { size: [612, 390], margins: { top: 0, bottom: 0, left: 0, right: 0 } };
     const doc = new PDFDocument(opts);
     const chunks = [];
     doc.on('data', c => chunks.push(c));
@@ -228,59 +226,50 @@ function genererCarte(doc, data) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PASSEPORT ÉLECTRONIQUE — A4 PORTRAIT BLEU MARINE (style OACI/CEDEAO)
+// PASSEPORT ÉLECTRONIQUE — même format carte paysage [612×390], fond navy
 // ─────────────────────────────────────────────────────────────────────────────
 function genererPasseport(doc, data) {
-  const W = 595, H = 842;
-  const ML = 42, MR = 42;
+  const W = 612, H = 390;
+  const ML = 20, MR = 20;
 
-  // ── Fond marine profond ───────────────────────────────────────────────────
+  // ── Fond navy profond ─────────────────────────────────────────────────────
   doc.rect(0, 0, W, H).fill(PP.fond);
 
-  // Motif guilloche (cercles concentriques discrets)
+  // Motif sécurité (lignes diagonales très discrètes)
   doc.save();
-  doc.strokeColor(PP.line).lineWidth(0.3).fillOpacity(0);
-  for (let r = 20; r < 350; r += 18) {
-    doc.circle(W / 2, 180, r).stroke();
-  }
-  doc.restore();
-
-  // Lignes diagonales sécurité
-  doc.save();
-  doc.strokeColor('#182E50').lineWidth(0.35);
-  for (let i = -H; i < W + H; i += 28) {
+  doc.strokeColor('#182E52').lineWidth(0.35);
+  for (let i = -H; i < W + H; i += 22) {
     doc.moveTo(i, 0).lineTo(i + H, H).stroke();
   }
   doc.restore();
 
-  // ── Bandeau header ────────────────────────────────────────────────────────
-  doc.rect(0, 0, W, 130).fill(PP.fond2);
-  doc.rect(0, 128, W, 1.5).fill(PP.or);
+  // ── Barre latérale gauche (or) ────────────────────────────────────────────
+  doc.rect(0, 0, 5, H).fill(PP.or);
 
-  // Emblème officiel (cercles + texte, SANS drapeau)
-  const EX = W / 2, EY = 58;
-  doc.circle(EX, EY, 34).strokeColor(PP.or).lineWidth(1.2).fillOpacity(0).stroke();
-  doc.circle(EX, EY, 27).strokeColor(PP.or).lineWidth(0.4).stroke();
-  doc.circle(EX, EY, 11).fill(PP.or).fillOpacity(1);
-  doc.fontSize(5.5).fillColor(PP.fond2).font('Helvetica-Bold').text('GN', EX - 10, EY - 3.5, { width: 20, align: 'center' });
+  // ── Bandeau header navy foncé ─────────────────────────────────────────────
+  const HEADER_H = 42;
+  doc.rect(5, 0, W - 5, HEADER_H).fill(PP.fond2);
+  doc.rect(5, HEADER_H, W - 5, 0.8).fill(PP.or);
 
-  doc.fontSize(5.5).fillColor(PP.or).fillOpacity(1).font('Helvetica-Bold')
-    .text('• REPUBLIQUE DE GUINEE •', EX - 38, EY - 10, { width: 76, align: 'center' });
-  doc.fontSize(4.5).fillColor(PP.grisCl)
-    .text('TRAVAIL · JUSTICE · SOLIDARITÉ', EX - 38, EY + 1, { width: 76, align: 'center' });
+  // Emblème (cercles, pas de drapeau)
+  const EX = 5 + 44, EY = HEADER_H / 2;
+  doc.circle(EX, EY, 16).strokeColor(PP.or).lineWidth(0.8).fillOpacity(0).stroke();
+  doc.circle(EX, EY, 11).strokeColor(PP.or).lineWidth(0.3).stroke();
+  doc.circle(EX, EY, 5).fill(PP.or).fillOpacity(1);
+  doc.fontSize(4).fillColor(PP.fond2).font('Helvetica-Bold')
+    .text('GN', EX - 7, EY - 2.5, { width: 14, align: 'center' });
 
-  doc.fontSize(18).fillColor(PP.or).font('Helvetica-Bold')
-    .text('PASSEPORT', 0, 94, { align: 'center', width: W });
-  doc.fontSize(8).fillColor(PP.grisCl).font('Helvetica')
-    .text('PASSPORT', 0, 114, { align: 'center', width: W });
-
-  // ── Séparateur contenu ────────────────────────────────────────────────────
-  const sepY = 148;
-  doc.rect(ML, sepY, W - ML - MR, 0.5).fill(PP.accent);
+  // Titre passeport
+  doc.fontSize(13).fillColor(PP.or).font('Helvetica-Bold')
+    .text('PASSEPORT', 5 + 70, 8, { lineBreak: false });
+  doc.fontSize(7).fillColor(PP.grisCl).font('Helvetica')
+    .text('REPUBLIQUE DE GUINEE  /  REPUBLIC OF GUINEA', 5 + 70, 23, { lineBreak: false });
+  doc.fontSize(6).fillColor(PP.accent).font('Helvetica')
+    .text('PASSPORT  —  OACI/ICAO COMPLIANT', 5 + 70, 33, { lineBreak: false });
 
   // ── Photo ─────────────────────────────────────────────────────────────────
-  const PX = ML, PY = sepY + 16;
-  const PW = 138, PH = 172;
+  const PX = ML + 8, PY = HEADER_H + 12;
+  const PW = 110, PH = 140;
 
   doc.rect(PX - 2, PY - 2, PW + 4, PH + 4).fill(PP.or);
   doc.rect(PX, PY, PW, PH).fill(PP.accent);
@@ -290,109 +279,112 @@ function genererPasseport(doc, data) {
     } catch {}
   } else {
     doc.circle(PX + PW / 2, PY + PH * 0.3, PW * 0.2).fill('#3A6090');
-    doc.ellipse(PX + PW / 2, PY + PH * 0.65, PW * 0.27, PH * 0.2).fill('#3A6090');
-    doc.fontSize(6.5).fillColor(PP.grisCl).font('Helvetica')
-      .text("PHOTO", PX, PY + PH - 16, { width: PW, align: 'center' });
+    doc.ellipse(PX + PW / 2, PY + PH * 0.65, PW * 0.27, PH * 0.19).fill('#3A6090');
+    doc.fontSize(6).fillColor(PP.grisCl).font('Helvetica')
+      .text('PHOTO', PX, PY + PH - 14, { width: PW, align: 'center' });
   }
 
-  // ── Données biographiques ─────────────────────────────────────────────────
-  const IX = PX + PW + 22;
-  const IW = W - IX - MR;
-  let iY = sepY + 16;
+  // Sceau sous la photo
+  const SX = PX + PW / 2, SY = PY + PH + 18;
+  doc.circle(SX, SY, 15).strokeColor(PP.or).lineWidth(0.7).fillOpacity(0).stroke();
+  doc.circle(SX, SY, 10).strokeColor(PP.or).lineWidth(0.3).stroke();
+  doc.fillOpacity(1).fontSize(4).fillColor(PP.or).font('Helvetica-Bold')
+    .text('IDENTIGUINEE', SX - 15, SY - 3, { width: 30, align: 'center' });
+
+  // ── Données ───────────────────────────────────────────────────────────────
+  const DX = PX + PW + 16;
+  const DW = W - DX - MR - 70;
+  let dY = HEADER_H + 12;
+  const ROW = 20;
 
   function fieldPP(label, value, x, y, w, bold) {
-    doc.rect(x, y - 1, w, 0.3).fill(PP.line);
-    doc.fontSize(5.5).fillColor(PP.grisCl).font('Helvetica-Bold').text(label, x, y + 2);
-    doc.fontSize(bold ? 10.5 : 9.5)
+    if (y > HEADER_H + 12) doc.rect(x, y - 2, w, 0.3).fill(PP.line);
+    doc.fontSize(5).fillColor(PP.grisCl).font('Helvetica-Bold').text(label, x, y);
+    doc.fontSize(bold ? 8.5 : 7.5)
       .fillColor(PP.cream)
       .font(bold ? 'Helvetica-Bold' : 'Helvetica')
-      .text((value || 'N/A').toString(), x, y + 11, { width: w, ellipsis: true, lineBreak: false });
+      .text((value || 'N/A').toString(), x, y + 7, { width: w, ellipsis: true, lineBreak: false });
   }
 
   const fields = [
-    { l: 'NOM / SURNAME',                    v: (data.nom || '').toUpperCase(),               bold: true },
-    { l: 'PRÉNOM(S) / GIVEN NAMES',           v: data.prenoms },
-    { l: 'DATE DE NAISSANCE / DATE OF BIRTH', v: data.dateNaissance },
-    { l: 'LIEU DE NAISSANCE / PLACE OF BIRTH',v: (data.lieuNaissance || '').toUpperCase() },
-    { l: 'SEXE / SEX',                        v: data.sexe === 'M' ? 'M — MASCULIN' : 'F — FÉMININ' },
-    { l: 'NATIONALITÉ / NATIONALITY',         v: (data.nationalite || 'GUINÉENNE').toUpperCase() },
-    { l: 'PROFESSION',                        v: data.profession || 'N/A' },
+    { l: 'NOM / SURNAME',                     v: (data.nom || '').toUpperCase(),               bold: true },
+    { l: 'PRÉNOM(S) / GIVEN NAMES',            v: data.prenoms },
+    { l: 'DATE DE NAISSANCE / DATE OF BIRTH',  v: data.dateNaissance },
+    { l: 'LIEU DE NAISSANCE / PLACE OF BIRTH', v: (data.lieuNaissance || '').toUpperCase() },
+    { l: 'SEXE / SEX',                         v: data.sexe === 'M' ? 'M — MASCULIN' : 'F — FÉMININ' },
+    { l: 'NATIONALITÉ / NATIONALITY',          v: (data.nationalite || 'GUINÉENNE').toUpperCase() },
+    { l: 'PROFESSION',                         v: data.profession || 'N/A' },
   ];
 
   fields.forEach(f => {
-    fieldPP(f.l, f.v, IX, iY, IW, f.bold);
-    iY += f.bold ? 30 : 27;
+    fieldPP(f.l, f.v, DX, dY, DW, f.bold);
+    dY += f.bold ? ROW + 2 : ROW;
   });
 
-  // N° passeport
-  const NOPY = Math.max(iY + 8, PY + PH + 8);
-  doc.rect(ML, NOPY, W - ML - MR, 46).fill(PP.fond2);
-  doc.rect(ML, NOPY, W - ML - MR, 46).strokeColor(PP.or).lineWidth(0.5).stroke();
-  doc.fontSize(6.5).fillColor(PP.or).font('Helvetica-Bold')
-    .text('N° PASSEPORT / PASSPORT NO.', 0, NOPY + 8, { align: 'center', width: W });
-  doc.fontSize(20).fillColor(PP.cream).font('Helvetica-Bold')
-    .text(data.id || '', 0, NOPY + 19, { align: 'center', width: W });
+  // Boîte N° passeport
+  const ID_Y = dY + 4;
+  doc.rect(DX, ID_Y, DW, 26).fill(PP.fond2);
+  doc.rect(DX, ID_Y, DW, 26).strokeColor(PP.or).lineWidth(0.5).stroke();
+  doc.fontSize(5.5).fillColor(PP.or).font('Helvetica-Bold')
+    .text('N° PASSEPORT / PASSPORT NO.', DX + 6, ID_Y + 5);
+  doc.fontSize(11).fillColor(PP.cream).font('Helvetica-Bold')
+    .text(data.id || '', DX + 6, ID_Y + 14, { lineBreak: false });
 
   // Dates
-  const DY = NOPY + 54;
-  doc.fontSize(6).fillColor(PP.grisCl).font('Helvetica-Bold').text("DATE D'ÉMISSION", ML, DY);
-  doc.fontSize(10).fillColor(PP.cream).font('Helvetica').text(data.dateEmission || '', ML, DY + 10, { lineBreak: false });
-  doc.fontSize(6).fillColor(PP.grisCl).font('Helvetica-Bold').text("DATE D'EXPIRATION", W / 2, DY, { lineBreak: false });
-  doc.fontSize(10).fillColor(PP.cream).font('Helvetica').text(data.dateExpiration || '', W / 2, DY + 10, { lineBreak: false });
+  const DATE_Y = ID_Y + 32;
+  doc.fontSize(5).fillColor(PP.grisCl).font('Helvetica-Bold').text("ÉMIS LE / ISSUED", DX, DATE_Y);
+  doc.fontSize(7).fillColor(PP.cream).font('Helvetica').text(data.dateEmission || '', DX, DATE_Y + 7, { lineBreak: false });
+  doc.fontSize(5).fillColor(PP.grisCl).font('Helvetica-Bold').text("EXPIRE / EXPIRY", DX + 110, DATE_Y, { lineBreak: false });
+  doc.fontSize(7).fillColor(PP.cream).font('Helvetica').text(data.dateExpiration || '', DX + 110, DATE_Y + 7, { lineBreak: false });
 
-  // QR
-  if (data.qrCodeDataUrl) {
-    try {
-      const qrBuf = Buffer.from(data.qrCodeDataUrl.split(',')[1], 'base64');
-      const QX = W - MR - 80, QY = DY - 2;
-      doc.rect(QX - 3, QY - 3, 86, 86).fill(PP.or);
-      doc.image(qrBuf, QX, QY, { width: 80, height: 80 });
-      doc.fontSize(5).fillColor(PP.grisCl).font('Helvetica')
-        .text('SCAN TO VERIFY', QX - 3, QY + 83, { width: 86, align: 'center' });
-    } catch {}
-  }
-
-  // Signature numérique
-  const SIGY = DY + 30;
-  doc.rect(ML, SIGY, W - ML - MR, 0.4).fill(PP.line);
-  doc.fontSize(6).fillColor(PP.grisCl).font('Helvetica-Bold')
-    .text('SIGNATURE NUMÉRIQUE / DIGITAL SIGNATURE', ML, SIGY + 8);
+  // Signature
+  const SIG_Y = DATE_Y + 22;
+  doc.rect(DX, SIG_Y, 148, 18).fill(PP.fond2);
+  doc.rect(DX, SIG_Y, 148, 18).strokeColor(PP.line).lineWidth(0.4).stroke();
+  doc.fontSize(5).fillColor(PP.grisCl).font('Helvetica').text('SIGNATURE', DX + 3, SIG_Y + 3);
   doc.save();
-  doc.strokeColor(PP.or).lineWidth(1).fillOpacity(0);
-  const sx = ML + 10, sy = SIGY + 25;
+  doc.strokeColor(PP.or).lineWidth(0.8).fillOpacity(0);
+  const sx = DX + 8, sy = SIG_Y + 13;
   doc.moveTo(sx, sy)
-    .bezierCurveTo(sx + 14, sy - 8,  sx + 22, sy + 6,  sx + 38, sy - 3)
-    .bezierCurveTo(sx + 50, sy - 9,  sx + 58, sy + 5,  sx + 76, sy - 2)
-    .bezierCurveTo(sx + 88, sy - 8,  sx + 96, sy + 6,  sx + 116, sy - 2)
-    .bezierCurveTo(sx + 128, sy - 8, sx + 136, sy + 4, sx + 150, sy)
+    .bezierCurveTo(sx + 10, sy - 6, sx + 16, sy + 3,  sx + 28, sy - 2)
+    .bezierCurveTo(sx + 36, sy - 6, sx + 42, sy + 3,  sx + 56, sy - 1)
+    .bezierCurveTo(sx + 64, sy - 5, sx + 70, sy + 3,  sx + 86, sy - 2)
     .stroke();
   doc.restore();
 
-  const hash = data.hashBlockchain || sigHash(data.id || '');
-  doc.fontSize(4.5).fillColor(PP.grisCl).font('Courier')
-    .text(hash.substring(0, 48) + '...', ML, SIGY + 36, { width: W - ML - MR - 90 });
-  doc.fontSize(5.5).fillColor('#6EE7B7').font('Helvetica-Bold')
-    .text(`✓ BLOC #${data.blockIndex || 0}  —  BLOCKCHAIN IDENTIGUINÉE  —  OACI/ICAO COMPLIANT`, ML, SIGY + 47);
+  // ── QR Code ────────────────────────────────────────────────────────────────
+  if (data.qrCodeDataUrl) {
+    try {
+      const qrBuf = Buffer.from(data.qrCodeDataUrl.split(',')[1], 'base64');
+      const QS = 60;
+      const QX = W - MR - QS, QY = HEADER_H + 12;
+      doc.rect(QX - 2, QY - 2, QS + 4, QS + 4).fill(PP.or);
+      doc.image(qrBuf, QX, QY, { width: QS, height: QS });
+      doc.fontSize(4.5).fillColor(PP.grisCl).font('Helvetica')
+        .text('SCAN / VERIFY', QX - 2, QY + QS + 3, { width: QS + 4, align: 'center' });
+    } catch {}
+  }
 
   // ── Zone MRZ ──────────────────────────────────────────────────────────────
-  const MRZY = H - 80;
-  doc.rect(0, MRZY - 2, W, 82).fill('#030A14');
-  doc.rect(0, MRZY - 2, W, 0.8).fill(PP.or);
+  const MRZ_Y = H - 52;
+  doc.rect(0, MRZ_Y, W, 52).fill('#030A14');
+  doc.rect(0, MRZ_Y, W, 0.6).fill(PP.or);
 
-  doc.fontSize(6.5).fillColor(PP.or).font('Helvetica-Bold')
-    .text('ZONE DE LECTURE AUTOMATIQUE  /  MACHINE READABLE ZONE (OACI/ICAO)', 0, MRZY + 5, { align: 'center', width: W });
+  doc.fontSize(5.5).fillColor(PP.or).font('Helvetica-Bold')
+    .text('MACHINE READABLE ZONE — ZONE DE LECTURE AUTOMATIQUE (OACI/ICAO)', 0, MRZ_Y + 5, { align: 'center', width: W });
 
   const nomP = (data.nom || '').toUpperCase().replace(/[^A-Z]/g, '');
   const preP = (data.prenoms || '').toUpperCase().replace(/[^A-Z ]/g, '').replace(/ /g, '<');
   const dobP = (data.dateNaissance || '000000').split('/').reverse().join('').substring(2, 8);
   const eidP = (data.id || '').replace(/-/g, '').padEnd(9, '<').substring(0, 9);
 
-  doc.fontSize(9).fillColor(PP.cream).font('Courier')
-    .text(mrzLine(`P<GIN${nomP}<<${preP}`, 44), ML, MRZY + 22)
-    .text(mrzLine(`${eidP}GIN${dobP}0<<<<<<<<<<<<`, 44), ML, MRZY + 40);
+  doc.fontSize(7.5).fillColor(PP.cream).font('Courier')
+    .text(mrzLine(`P<GIN${nomP}<<${preP}`, 30), ML + 8, MRZ_Y + 17)
+    .text(mrzLine(`${eidP}GIN${dobP}0`, 30), ML + 8, MRZ_Y + 30);
 
-  doc.fontSize(5.5).fillColor(PP.grisCl)
-    .text('www.identiguinee.gov.gn  —  Plateforme Nationale d\'Identité Biométrique', 0, MRZY + 60, { align: 'center', width: W });
+  const hash = data.hashBlockchain || sigHash(data.id || '');
+  doc.fontSize(4).fillColor(PP.accent).font('Courier')
+    .text(`SHA-256: ${hash.substring(0, 40)}... | BLOC #${data.blockIndex || 0}`, ML + 8, MRZ_Y + 42);
 }
 
 module.exports = { generer };

@@ -1,54 +1,40 @@
 'use client';
 import Link from 'next/link';
 
-const S = {
-  wrap:    { background: '#0D1B2E', borderTop: '1px solid #1E2F47', padding: '48px 24px 28px' },
-  inner:   { maxWidth: 1160, margin: '0 auto' },
-  grid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 40, marginBottom: 40 },
-  heading: { fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#D4AF37', marginBottom: 14 },
-  link:    { display: 'block', fontSize: 12, color: '#4A6080', textDecoration: 'none', marginBottom: 8, transition: 'color 0.15s' },
-  small:   { fontSize: 11, color: '#4A6080', lineHeight: 1.7 },
-  badge:   { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#4A6080', background: '#0D1B2E', border: '1px solid #1E2F47', borderRadius: 3, padding: '3px 8px' },
-};
-
 export default function Footer() {
   return (
-    <footer style={S.wrap}>
-      <div style={S.inner}>
-        <div style={S.grid}>
+    <footer style={{ background: '#F1F5F9', borderTop: '1px solid #E2E8F0', padding: '48px 24px 28px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 40, marginBottom: 40 }}>
 
-          {/* Identité */}
+          {/* Branding */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 3, background: 'linear-gradient(135deg,#D4AF37,#E8C56A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
-                🇬🇳
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#F0EDE8' }}>
-                Identi<span style={{ color: '#D4AF37' }}>Guinée</span>
-              </span>
+              <div style={{ width: 32, height: 32, borderRadius: 6, background: 'linear-gradient(135deg,#0F2544,#1E3A5F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🇬🇳</div>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#0F2544' }}>Identi<span style={{ color: '#B8960C' }}>Guinée</span></span>
             </div>
-            <p style={{ ...S.small, maxWidth: 220 }}>
-              Plateforme souveraine de gestion de l'identité biométrique numérique pour la République de Guinée. Sécurisée par blockchain.
+            <p style={{ fontSize: 12, color: '#64748B', lineHeight: 1.7, maxWidth: 220, marginBottom: 16 }}>
+              Plateforme souveraine de gestion de l'identité biométrique numérique pour la République de Guinée.
             </p>
-            <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <span style={S.badge}>🔒 AES-256</span>
-              <span style={S.badge}>⛓ Blockchain</span>
-              <span style={S.badge}>✓ OACI</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {['🔒 AES-256', '⛓ Blockchain', '✓ OACI'].map(b => (
+                <span key={b} style={{ fontSize: 10, color: '#64748B', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 100, padding: '3px 9px', fontWeight: 500 }}>{b}</span>
+              ))}
             </div>
           </div>
 
           {/* Services */}
           <div>
-            <div style={S.heading}>Services</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: 14 }}>Services</div>
             {[
-              { href: '/demande?type=carte',       label: 'Carte d\'Identité Nationale' },
-              { href: '/demande?type=passeport',   label: 'Passeport Électronique' },
-              { href: '/renouvellement',           label: 'Renouvellement de document' },
-              { href: '/verification',             label: 'Vérifier un document' },
+              { href: '/demande',      label: "Carte d'Identité Nationale" },
+              { href: '/demande',      label: 'Passeport Électronique' },
+              { href: '/renouvellement', label: 'Renouvellement' },
+              { href: '/verification', label: 'Vérifier un document' },
             ].map(l => (
-              <Link key={l.href} href={l.href} style={S.link}
-                onMouseOver={e => e.currentTarget.style.color = '#D4AF37'}
-                onMouseOut={e => e.currentTarget.style.color = '#4A6080'}>
+              <Link key={l.label} href={l.href} style={{ display: 'block', fontSize: 13, color: '#475569', textDecoration: 'none', marginBottom: 9, transition: 'color 0.15s' }}
+                onMouseOver={e => e.currentTarget.style.color = '#0F2544'}
+                onMouseOut={e => e.currentTarget.style.color = '#475569'}>
                 {l.label}
               </Link>
             ))}
@@ -56,14 +42,14 @@ export default function Footer() {
 
           {/* Plateforme */}
           <div>
-            <div style={S.heading}>Plateforme</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: 14 }}>Plateforme</div>
             {[
-              { href: '/dashboard',    label: 'Explorateur blockchain' },
-              { href: '/admin/login',  label: 'Espace administrateur' },
+              { href: '/dashboard',   label: 'Explorateur Blockchain' },
+              { href: '/admin/login', label: 'Espace Administrateur' },
             ].map(l => (
-              <Link key={l.href} href={l.href} style={S.link}
-                onMouseOver={e => e.currentTarget.style.color = '#D4AF37'}
-                onMouseOut={e => e.currentTarget.style.color = '#4A6080'}>
+              <Link key={l.href} href={l.href} style={{ display: 'block', fontSize: 13, color: '#475569', textDecoration: 'none', marginBottom: 9, transition: 'color 0.15s' }}
+                onMouseOver={e => e.currentTarget.style.color = '#0F2544'}
+                onMouseOut={e => e.currentTarget.style.color = '#475569'}>
                 {l.label}
               </Link>
             ))}
@@ -71,18 +57,17 @@ export default function Footer() {
 
           {/* Sécurité */}
           <div>
-            <div style={S.heading}>Sécurité & Conformité</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: 14 }}>Sécurité & Conformité</div>
             <ul style={{ listStyle: 'none' }}>
               {[
                 'Chiffrement de bout en bout AES-256',
                 'Signature numérique X.509',
                 'Blockchain immuable SHA-256',
-                'Authentification multi-facteurs',
+                'Authentification JWT + bcrypt',
                 'Conformité RGPD & normes locales',
-                'Hébergement souverain Guinée',
               ].map(item => (
-                <li key={item} style={{ ...S.small, marginBottom: 6, paddingLeft: 14, position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 0, color: '#009460' }}>✓</span>
+                <li key={item} style={{ fontSize: 12, color: '#64748B', marginBottom: 7, paddingLeft: 16, position: 'relative', lineHeight: 1.5 }}>
+                  <span style={{ position: 'absolute', left: 0, color: '#009460', fontWeight: 700 }}>✓</span>
                   {item}
                 </li>
               ))}
@@ -90,17 +75,12 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Séparateur */}
-        <div className="sep-or" style={{ marginBottom: 20 }} />
+        {/* Séparateur tricolore */}
+        <div style={{ height: 2, background: 'linear-gradient(to right,#CE1126 0% 33%,#FCD116 33% 66%,#009460 66% 100%)', marginBottom: 20, borderRadius: 1 }} />
 
-        {/* Bottom */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <p style={{ ...S.small, fontSize: 11 }}>
-            © 2026 IdentiGuinée — République de Guinée. Tous droits réservés.
-          </p>
-          <p style={{ ...S.small, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            Travail — Justice — Solidarité
-          </p>
+          <p style={{ fontSize: 12, color: '#94A3B8' }}>© 2026 IdentiGuinée — République de Guinée. Tous droits réservés.</p>
+          <p style={{ fontSize: 11, color: '#CBD5E1', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Travail · Justice · Solidarité</p>
         </div>
       </div>
     </footer>

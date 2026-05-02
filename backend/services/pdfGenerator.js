@@ -50,8 +50,8 @@ async function generer(data) {
     doc.on('data', c => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
-    if (isPP) genererPasseport(doc, data);
-    else      genererCarte(doc, data);
+    if (data.type === 'passeport') genererPasseport(doc, data);
+    else                           genererCarte(doc, data);
     doc.end();
   });
 }

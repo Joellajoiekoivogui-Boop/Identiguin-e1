@@ -2,433 +2,397 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const crypto = require('crypto');
 
-// Palette officielle
-const C = {
-  rouge:     '#CE1126',
-  jaune:     '#FCD116',
-  vert:      '#009460',
-  nuit:      '#08111F',
-  nuit2:     '#0D1B2E',
-  nuit3:     '#162440',
-  or:        '#D4AF37',
-  orClair:   '#E8C56A',
-  blanc:     '#F0EDE8',
-  gris:      '#8A9BB5',
-  grisF:     '#4A6080',
-  bleuClair: '#2A4A6A',
+// ── Palettes ───────────────────────────────────────────────────────────────────
+const CARD = {
+  blanc:   '#FFFFFF',
+  fondCl:  '#F4F7FB',
+  navy:    '#0A1628',
+  bleu:    '#1E3A5F',
+  bleuMd:  '#2A5080',
+  bleuCl:  '#5B8DB8',
+  or:      '#C8A830',
+  orCl:    '#DAB94A',
+  gris:    '#6B7A8D',
+  grisL:   '#B8C4D0',
+  grisXL:  '#E4EAF2',
+  rouge:   '#CE1126',
+  jaune:   '#FCD116',
+  vert:    '#009460',
+  shadow:  '#C8D4E0',
 };
 
-async function generer(data) {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margins: { top: 0, bottom: 0, left: 0, right: 0 } });
-    const chunks = [];
-    doc.on('data', (c) => chunks.push(c));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
-    if (data.type === 'passeport') genererPasseport(doc, data);
-    else genererCarte(doc, data);
-    doc.end();
-  });
-}
+const PP = {
+  fond:    '#0F1E3A',
+  fond2:   '#0A1628',
+  or:      '#C8A830',
+  orCl:    '#DAB94A',
+  cream:   '#F0EDE8',
+  gris:    '#8A9BB5',
+  grisCl:  '#B0C0D4',
+  line:    '#1E3560',
+  accent:  '#3A6090',
+};
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UTILITAIRES
-// ─────────────────────────────────────────────────────────────────────────────
-
-function drapeauGuinee(doc, x, y, w, h) {
-  const b = w / 3;
-  doc.rect(x, y, b, h).fill(C.rouge);
-  doc.rect(x + b, y, b, h).fill(C.jaune);
-  doc.rect(x + b * 2, y, b, h).fill(C.vert);
-  // Liseré or
-  doc.rect(x, y, w, h).strokeColor(C.or).lineWidth(0.8).stroke();
-}
-
-function bandeTricolore(doc, y, W, h) {
-  const b = W / 3;
-  doc.rect(0, y, b, h).fill(C.rouge);
-  doc.rect(b, y, b, h).fill(C.jaune);
-  doc.rect(b * 2, y, b, h).fill(C.vert);
-}
-
-function sceau(doc, cx, cy, r) {
-  // Cercle extérieur
-  doc.circle(cx, cy, r).strokeColor(C.or).lineWidth(1.2).fillOpacity(0).stroke();
-  // Cercle intérieur
-  doc.circle(cx, cy, r - 5).strokeColor(C.or).lineWidth(0.4).stroke();
-  // Texte circulaire simulé
-  doc.fontSize(4.5).fillColor(C.or).fillOpacity(1).font('Helvetica-Bold')
-    .text('• REPUBLIQUE DE GUINEE •', cx - r + 4, cy - 5, { width: (r - 4) * 2, align: 'center' });
-  doc.fontSize(4).fillColor(C.orClair)
-    .text('IDENTITÉ OFFICIELLE', cx - r + 4, cy + 1, { width: (r - 4) * 2, align: 'center' });
-}
-
-function signatureNumerique(doc, x, y, largeur) {
-  // Fond de la zone signature
-  doc.rect(x - 8, y - 8, largeur + 16, 28).fill('#040C18');
-  doc.rect(x - 8, y - 8, largeur + 16, 28).strokeColor(C.bleuClair).lineWidth(0.4).stroke();
-
-  // Courbe signature manuscrite (bezier)
-  doc.save();
-  doc.strokeColor(C.orClair).lineWidth(1.1).fillOpacity(0);
-
-  doc.moveTo(x, y + 8)
-    .bezierCurveTo(x + 12, y,     x + 18, y + 14, x + 32, y + 6)
-    .bezierCurveTo(x + 42, y,     x + 48, y + 12, x + 60, y + 7)
-    .bezierCurveTo(x + 70, y + 2, x + 76, y + 10, x + 90, y + 5)
-    .stroke();
-
-  doc.moveTo(x + 90, y + 5)
-    .bezierCurveTo(x + 100, y,    x + 108, y + 11, x + 120, y + 6)
-    .bezierCurveTo(x + 130, y + 1,x + 136, y + 9,  x + 150, y + 5)
-    .stroke();
-
-  // Trait de soulignement
-  doc.moveTo(x, y + 14).lineTo(x + 155, y + 14)
-    .strokeColor(C.or).lineWidth(0.6).stroke();
-
-  doc.restore();
-}
-
-function cornerAccents(doc, x, y, w, h, s = 10, color = C.or) {
-  doc.rect(x, y, s, 1.5).fill(color);
-  doc.rect(x, y, 1.5, s).fill(color);
-  doc.rect(x + w - s, y, s, 1.5).fill(color);
-  doc.rect(x + w - 1.5, y, 1.5, s).fill(color);
-  doc.rect(x, y + h - 1.5, s, 1.5).fill(color);
-  doc.rect(x, y + h - s, 1.5, s).fill(color);
-  doc.rect(x + w - s, y + h - 1.5, s, 1.5).fill(color);
-  doc.rect(x + w - 1.5, y + h - s, 1.5, s).fill(color);
-}
-
-function champInfo(doc, label, valeur, x, y, w, bold = false) {
-  doc.fontSize(6).fillColor(C.or).font('Helvetica-Bold').text(label, x, y);
-  doc.fontSize(bold ? 10.5 : 9.5)
-    .fillColor(C.blanc)
-    .font(bold ? 'Helvetica-Bold' : 'Helvetica')
-    .text((valeur || 'N/A').toString(), x, y + 8, { width: w, ellipsis: true });
-}
-
-function photoOuPlaceholder(doc, pX, pY, pW, pH, photoPath) {
-  doc.rect(pX, pY, pW, pH).fill(C.nuit3);
-  if (photoPath && fs.existsSync(photoPath)) {
-    try {
-      doc.image(photoPath, pX, pY, { width: pW, height: pH, cover: [pW, pH] });
-      return;
-    } catch {}
-  }
-  // Silhouette
-  doc.circle(pX + pW / 2, pY + pH * 0.33, pW * 0.22).fill(C.bleuClair);
-  doc.ellipse(pX + pW / 2, pY + pH * 0.72, pW * 0.3, pH * 0.22).fill(C.bleuClair);
-  doc.fontSize(7).fillColor(C.grisF).font('Helvetica')
-    .text('PHOTO D\'IDENTITÉ', pX, pY + pH - 16, { width: pW, align: 'center' });
+function sigHash(id) {
+  return crypto.createHash('sha256').update(`IDENTIGUINEE:${id}:2026`).digest('hex');
 }
 
 function mrzLine(str, len) {
   return str.toUpperCase().replace(/[^A-Z0-9<]/g, '<').padEnd(len, '<').substring(0, len);
 }
 
-function sigHash(id) {
-  return crypto.createHash('sha256').update(`IDENTIGUINEE:${id}:SIGNATURE:${Date.now()}`).digest('hex');
+async function generer(data) {
+  return new Promise((resolve, reject) => {
+    const isPP = data.type === 'passeport';
+    const opts = isPP
+      ? { size: 'A4',         margins: { top: 0, bottom: 0, left: 0, right: 0 } }
+      : { size: [612, 390],   margins: { top: 0, bottom: 0, left: 0, right: 0 } };
+    const doc = new PDFDocument(opts);
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    if (isPP) genererPasseport(doc, data);
+    else      genererCarte(doc, data);
+    doc.end();
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CARTE D'IDENTITÉ NATIONALE BIOMÉTRIQUE
+// CARTE D'IDENTITÉ NATIONALE BIOMÉTRIQUE — PAYSAGE BLANC (style USA ID)
 // ─────────────────────────────────────────────────────────────────────────────
-
 function genererCarte(doc, data) {
-  const W = 595, H = 842;
-  const BANDE = 16;
-  const MARGE = 38;
+  const W = 612, H = 390;
+  const ML = 20, MR = 20; // marges
 
-  // ── Fond principal ──────────────────────────────────────────────────────────
-  doc.rect(0, 0, W, H).fill(C.nuit);
+  // ── Fond blanc ────────────────────────────────────────────────────────────
+  doc.rect(0, 0, W, H).fill(CARD.blanc);
 
-  // Motif de sécurité (lignes diagonales discrètes)
+  // Motif sécurité (points discrets)
   doc.save();
-  doc.strokeColor('#0E1E32').lineWidth(0.4);
-  for (let i = -H; i < W + H; i += 24) {
-    doc.moveTo(i, 0).lineTo(i + H, H).stroke();
+  for (let x = 8; x < W; x += 14) {
+    for (let y = 8; y < H; y += 14) {
+      doc.circle(x, y, 0.5).fill(CARD.grisXL);
+    }
   }
   doc.restore();
 
-  // ── Bandes tricolores ───────────────────────────────────────────────────────
-  bandeTricolore(doc, 0, W, BANDE);
-  bandeTricolore(doc, H - BANDE, W, BANDE);
+  // ── Barre latérale gauche (navy) ──────────────────────────────────────────
+  doc.rect(0, 0, 5, H).fill(CARD.navy);
 
-  // ── DRAPEAU GUINÉE (grand, côté droit, zone header) ─────────────────────────
-  const flagW = 90, flagH = 58;
-  const flagX = W - MARGE - flagW;
-  const flagY = BANDE + 12;
-  drapeauGuinee(doc, flagX, flagY, flagW, flagH);
-  doc.fontSize(6).fillColor(C.or).font('Helvetica-Bold')
-    .text('GUINÉE', flagX, flagY + flagH + 4, { width: flagW, align: 'center' });
+  // ── Bande tricolore GUINÉE en haut ────────────────────────────────────────
+  const STRIP = 8;
+  const sw = (W - 5) / 3;
+  doc.rect(5,          0, sw, STRIP).fill(CARD.rouge);
+  doc.rect(5 + sw,     0, sw, STRIP).fill(CARD.jaune);
+  doc.rect(5 + sw * 2, 0, sw, STRIP).fill(CARD.vert);
 
-  // ── EN-TÊTE ─────────────────────────────────────────────────────────────────
-  const headerY = BANDE + 10;
-  doc.fontSize(8.5).fillColor(C.orClair).font('Helvetica-Bold')
-    .text('RÉPUBLIQUE DE GUINÉE', MARGE, headerY, { width: W - MARGE * 2 - flagW - 10, align: 'center' });
-  doc.fontSize(6.5).fillColor(C.gris).font('Helvetica')
-    .text('Travail — Justice — Solidarité', MARGE, headerY + 13, { width: W - MARGE * 2 - flagW - 10, align: 'center' });
-
-  // Séparateur or
-  doc.rect(MARGE, headerY + 28, W - MARGE * 2 - flagW - 10, 0.8).fill(C.or);
-
-  doc.fontSize(12.5).fillColor(C.blanc).font('Helvetica-Bold')
-    .text("CARTE NATIONALE D'IDENTITÉ BIOMÉTRIQUE", MARGE, headerY + 34, { width: W - MARGE * 2 - flagW - 10, align: 'center' });
-  doc.fontSize(7).fillColor(C.gris).font('Helvetica')
-    .text('NATIONAL BIOMETRIC IDENTITY CARD', MARGE, headerY + 50, { width: W - MARGE * 2 - flagW - 10, align: 'center' });
+  // ── En-tête ───────────────────────────────────────────────────────────────
+  const hY = STRIP + 5;
+  doc.fontSize(6.5).fillColor(CARD.navy).font('Helvetica-Bold')
+    .text('RÉPUBLIQUE DE GUINÉE — REPUBLIC OF GUINEA', ML + 5, hY, { align: 'center', width: W - ML - MR });
+  doc.fontSize(9).fillColor(CARD.navy).font('Helvetica-Bold')
+    .text("CARTE NATIONALE D'IDENTITÉ BIOMÉTRIQUE", ML + 5, hY + 10, { align: 'center', width: W - ML - MR });
+  doc.fontSize(6).fillColor(CARD.bleuCl).font('Helvetica')
+    .text('NATIONAL BIOMETRIC IDENTITY CARD', ML + 5, hY + 21, { align: 'center', width: W - ML - MR });
 
   // Ligne séparatrice
-  const sepY = BANDE + 82;
-  doc.rect(MARGE, sepY, W - MARGE * 2, 0.6).fill(C.or);
+  const RULE_Y = hY + 32;
+  doc.rect(ML + 5, RULE_Y, W - ML - MR - 5, 0.6).fill(CARD.or);
 
-  // ── ZONE PHOTO (gauche) ──────────────────────────────────────────────────────
-  const pX = MARGE, pY = sepY + 14;
-  const pW = 158, pH = 198;
+  // ── Photo ─────────────────────────────────────────────────────────────────
+  const PX = ML + 8, PY = RULE_Y + 10;
+  const PW = 115, PH = 145;
 
-  // Cadre or + photo
-  doc.rect(pX - 3, pY - 3, pW + 6, pH + 6).fill(C.or);
-  photoOuPlaceholder(doc, pX, pY, pW, pH, data.photoPath);
+  // Ombre
+  doc.rect(PX + 3, PY + 3, PW, PH).fill(CARD.shadow);
+  // Fond photo
+  doc.rect(PX, PY, PW, PH).fill(CARD.grisXL);
+  if (data.photoPath && fs.existsSync(data.photoPath)) {
+    try {
+      doc.image(data.photoPath, PX, PY, { width: PW, height: PH, cover: [PW, PH] });
+    } catch {}
+  } else {
+    // Silhouette
+    doc.circle(PX + PW / 2, PY + PH * 0.3, PW * 0.19).fill(CARD.grisL);
+    doc.ellipse(PX + PW / 2, PY + PH * 0.65, PW * 0.26, PH * 0.19).fill(CARD.grisL);
+    doc.fontSize(6).fillColor(CARD.gris).font('Helvetica')
+      .text("PHOTO", PX, PY + PH - 14, { width: PW, align: 'center' });
+  }
+  // Cadre
+  doc.rect(PX, PY, PW, PH).strokeColor(CARD.navy).lineWidth(0.8).stroke();
 
-  // Drapeau guinéen SOUS la photo (proéminent)
-  const dX = pX, dY = pY + pH + 10;
-  const dW = pW, dH = 48;
-  drapeauGuinee(doc, dX, dY, dW, dH);
+  // Sceau sous la photo
+  const SX = PX + PW / 2, SY = PY + PH + 18;
+  doc.circle(SX, SY, 18).strokeColor(CARD.or).lineWidth(0.8).fillOpacity(0).stroke();
+  doc.circle(SX, SY, 13).strokeColor(CARD.or).lineWidth(0.35).stroke();
+  doc.fillOpacity(1).fontSize(4.5).fillColor(CARD.or).font('Helvetica-Bold')
+    .text('IDENTIGUINEE', SX - 18, SY - 3.5, { width: 36, align: 'center' });
+  doc.fontSize(4).fillColor(CARD.bleuCl)
+    .text('GUINÉE · GN', SX - 18, SY + 2, { width: 36, align: 'center' });
 
-  // Légende drapeau
-  doc.fontSize(5.5).fillColor(C.orClair).font('Helvetica-Bold')
-    .text('🇬🇳  DRAPEAU DE LA GUINÉE  🇬🇳', dX, dY + dH + 5, { width: dW, align: 'center' });
+  // ── Champs de données ─────────────────────────────────────────────────────
+  const DX = PX + PW + 16;
+  const DW = W - DX - MR - 72; // réserve 72pt pour le QR
+  let dY = RULE_Y + 10;
+  const ROW = 22;
 
-  // Sceau officiel
-  const sceauY = dY + dH + 26;
-  sceau(doc, pX + pW / 2, sceauY + 22, 26);
+  function fieldCard(label, value, x, y, w, isBold) {
+    doc.fontSize(5).fillColor(CARD.bleuMd).font('Helvetica-Bold').text(label, x, y);
+    doc.fontSize(isBold ? 9 : 8)
+      .fillColor(CARD.navy)
+      .font(isBold ? 'Helvetica-Bold' : 'Helvetica')
+      .text((value || 'N/A').toString(), x, y + 7, { width: w, ellipsis: true, lineBreak: false });
+  }
 
-  // ── ZONE INFORMATIONS (droite) ───────────────────────────────────────────────
-  const iX = pX + pW + 22;
-  const iW = W - iX - MARGE;
-  let iY = sepY + 14;
-  const lineH = 30;
-
-  const champs = [
-    { label: 'NOM / SURNAME', val: (data.nom || '').toUpperCase(), bold: true },
-    { label: 'PRÉNOM(S) / GIVEN NAMES', val: data.prenoms },
-    { label: 'DATE DE NAISSANCE / DATE OF BIRTH', val: data.dateNaissance },
-    { label: 'LIEU DE NAISSANCE / PLACE OF BIRTH', val: (data.lieuNaissance || '').toUpperCase() },
-    { label: 'SEXE / SEX', val: data.sexe === 'M' ? 'M — MASCULIN' : 'F — FÉMININ' },
-    { label: 'NATIONALITÉ / NATIONALITY', val: (data.nationalite || 'GUINÉENNE').toUpperCase() },
-    { label: 'PROFESSION', val: data.profession || 'N/A' },
-    { label: 'ADRESSE / ADDRESS', val: data.adresse || 'N/A' },
+  const fields = [
+    { l: 'NOM / SURNAME',                    v: (data.nom || '').toUpperCase(),               bold: true },
+    { l: 'PRÉNOM(S) / GIVEN NAME(S)',         v: data.prenoms },
+    { l: 'DATE DE NAISSANCE / DATE OF BIRTH', v: data.dateNaissance },
+    { l: 'LIEU DE NAISSANCE / PLACE OF BIRTH',v: (data.lieuNaissance || '').toUpperCase() },
+    { l: 'SEXE / SEX',                        v: data.sexe === 'M' ? 'M — MASCULIN' : 'F — FÉMININ' },
+    { l: 'NATIONALITÉ / NATIONALITY',         v: (data.nationalite || 'Guinéenne').toUpperCase() },
+    { l: 'PROFESSION',                        v: data.profession || 'N/A' },
   ];
 
-  champs.forEach((c, i) => {
-    if (i > 0) doc.rect(iX, iY - 4, iW, 0.3).fill(C.bleuClair);
-    champInfo(doc, c.label, c.val, iX, iY, iW, c.bold);
-    iY += lineH;
+  fields.forEach((f, i) => {
+    if (i > 0) doc.rect(DX, dY - 2, DW, 0.3).fill(CARD.grisXL);
+    fieldCard(f.l, f.v, DX, dY, DW, f.bold);
+    dY += f.bold ? ROW + 2 : ROW;
   });
 
-  // ── IDENTIFIANT UNIQUE ───────────────────────────────────────────────────────
-  const idBoxY = Math.max(iY + 6, dY + dH + 72);
-  const idBoxH = 52;
-  doc.rect(MARGE, idBoxY, W - MARGE * 2, idBoxH).fill('#040C18');
-  cornerAccents(doc, MARGE, idBoxY, W - MARGE * 2, idBoxH, 12);
+  // Boîte identifiant
+  const ID_Y = dY + 4;
+  doc.rect(DX, ID_Y, DW, 28).fill(CARD.navy);
+  doc.fontSize(5.5).fillColor(CARD.or).font('Helvetica-Bold')
+    .text('N° IDENTIFIANT / UNIQUE ID', DX + 6, ID_Y + 5);
+  doc.fontSize(12).fillColor(CARD.blanc).font('Helvetica-Bold')
+    .text(data.id || '', DX + 6, ID_Y + 14, { lineBreak: false });
 
-  doc.fontSize(7).fillColor(C.or).font('Helvetica-Bold')
-    .text('IDENTIFIANT UNIQUE  /  UNIQUE IDENTIFIER', 0, idBoxY + 9, { align: 'center', width: W });
-  doc.fontSize(22).fillColor(C.blanc).font('Helvetica-Bold')
-    .text(data.id || '', 0, idBoxY + 22, { align: 'center', width: W });
+  // Dates
+  const DATE_Y = ID_Y + 34;
+  doc.rect(DX, DATE_Y - 1, DW, 0.3).fill(CARD.grisXL);
+  doc.fontSize(5).fillColor(CARD.bleuMd).font('Helvetica-Bold').text("ÉMIS LE / ISSUED", DX, DATE_Y);
+  doc.fontSize(7.5).fillColor(CARD.navy).font('Helvetica').text(data.dateEmission || '', DX, DATE_Y + 7, { lineBreak: false });
+  doc.fontSize(5).fillColor(CARD.bleuMd).font('Helvetica-Bold').text("EXPIRE LE / EXPIRY", DX + 110, DATE_Y, { lineBreak: false });
+  doc.fontSize(7.5).fillColor(CARD.navy).font('Helvetica').text(data.dateExpiration || '', DX + 110, DATE_Y + 7, { lineBreak: false });
 
-  // ── DATES ────────────────────────────────────────────────────────────────────
-  const datesY = idBoxY + idBoxH + 8;
-  doc.rect(MARGE, datesY, W - MARGE * 2, 0.4).fill(C.bleuClair);
+  // Zone signature
+  const SIG_Y = DATE_Y + 22;
+  doc.rect(DX, SIG_Y, 148, 20).fill(CARD.fondCl);
+  doc.rect(DX, SIG_Y, 148, 20).strokeColor(CARD.grisL).lineWidth(0.4).stroke();
+  doc.fontSize(5).fillColor(CARD.gris).font('Helvetica').text('SIGNATURE', DX + 3, SIG_Y + 3);
+  doc.save();
+  doc.strokeColor(CARD.navy).lineWidth(0.7).fillOpacity(0);
+  const sx = DX + 8, sy = SIG_Y + 14;
+  doc.moveTo(sx, sy)
+    .bezierCurveTo(sx + 10, sy - 7, sx + 16, sy + 3,  sx + 28, sy - 2)
+    .bezierCurveTo(sx + 36, sy - 7, sx + 42, sy + 4,  sx + 56, sy - 1)
+    .bezierCurveTo(sx + 64, sy - 6, sx + 70, sy + 3,  sx + 86, sy - 2)
+    .stroke();
+  doc.restore();
 
-  doc.fontSize(6).fillColor(C.or).font('Helvetica-Bold').text("DATE D'ÉMISSION", MARGE, datesY + 6);
-  doc.fontSize(10).fillColor(C.blanc).font('Helvetica').text(data.dateEmission || '', MARGE, datesY + 16);
-
-  doc.fontSize(6).fillColor(C.or).font('Helvetica-Bold').text("DATE D'EXPIRATION", W / 2 - 10, datesY + 6);
-  doc.fontSize(10).fillColor(C.blanc).font('Helvetica').text(data.dateExpiration || '', W / 2 - 10, datesY + 16);
-
-  // ── SIGNATURE NUMÉRIQUE + QR ─────────────────────────────────────────────────
-  const sigZoneY = datesY + 40;
-  doc.rect(MARGE, sigZoneY, W - MARGE * 2, 0.4).fill(C.bleuClair);
-
-  doc.fontSize(6.5).fillColor(C.or).font('Helvetica-Bold')
-    .text('SIGNATURE NUMÉRIQUE  /  DIGITAL SIGNATURE', MARGE, sigZoneY + 8);
-
-  signatureNumerique(doc, MARGE, sigZoneY + 22, 230);
-
-  const hashVal = data.hashBlockchain || sigHash(data.id || '');
-  doc.fontSize(5).fillColor(C.gris).font('Courier')
-    .text(hashVal.substring(0, 32) + '...', MARGE, sigZoneY + 52, { width: 240 });
-
-  doc.fontSize(5.5).fillColor(C.vert).font('Helvetica-Bold')
-    .text(`✓ BLOC #${data.blockIndex || 0}  —  BLOCKCHAIN IDENTIGUINÉE  —  SHA-256 VÉRIFIÉ`, MARGE, sigZoneY + 62);
-
-  // QR Code
+  // ── QR Code ────────────────────────────────────────────────────────────────
   if (data.qrCodeDataUrl) {
     try {
       const qrBuf = Buffer.from(data.qrCodeDataUrl.split(',')[1], 'base64');
-      const qrSize = 82;
-      const qrX = W - MARGE - qrSize;
-      const qrY = sigZoneY + 4;
-      doc.rect(qrX - 3, qrY - 3, qrSize + 6, qrSize + 6).fill(C.or);
-      doc.image(qrBuf, qrX, qrY, { width: qrSize, height: qrSize });
-      doc.fontSize(5.5).fillColor(C.gris).font('Helvetica')
-        .text('Scanner pour vérifier', qrX - 3, qrY + qrSize + 5, { width: qrSize + 6, align: 'center' });
+      const QS = 62;
+      const QX = W - MR - QS, QY = RULE_Y + 10;
+      doc.rect(QX - 2, QY - 2, QS + 4, QS + 4).fill(CARD.navy);
+      doc.image(qrBuf, QX, QY, { width: QS, height: QS });
+      doc.fontSize(4.5).fillColor(CARD.gris).font('Helvetica')
+        .text('SCAN / VERIFY', QX - 2, QY + QS + 3, { width: QS + 4, align: 'center' });
     } catch {}
   }
 
-  // Deuxième drapeau (petit, décoratif bas-gauche)
-  const flag2X = MARGE, flag2Y = sigZoneY + 75;
-  drapeauGuinee(doc, flag2X, flag2Y, 54, 32);
+  // ── Zone MRZ ──────────────────────────────────────────────────────────────
+  const MRZ_Y = H - 52;
+  doc.rect(0, MRZ_Y, W, 52).fill(CARD.navy);
+  doc.rect(0, MRZ_Y, W, 0.6).fill(CARD.or);
 
-  // ── ZONE MRZ ─────────────────────────────────────────────────────────────────
-  const mrzY = H - BANDE - 52;
-  doc.rect(0, mrzY - 2, W, 50).fill('#030A12');
-  doc.rect(0, mrzY - 2, W, 0.8).fill(C.or);
-
-  doc.fontSize(6.5).fillColor(C.or).font('Helvetica-Bold')
-    .text('ZONE DE LECTURE AUTOMATIQUE  /  MACHINE READABLE ZONE', 0, mrzY + 4, { align: 'center', width: W });
+  doc.fontSize(5.5).fillColor(CARD.or).font('Helvetica-Bold')
+    .text('MACHINE READABLE ZONE — ZONE DE LECTURE AUTOMATIQUE', 0, MRZ_Y + 5, { align: 'center', width: W });
 
   const nom = (data.nom || '').toUpperCase().replace(/[^A-Z]/g, '');
   const pre = (data.prenoms || '').toUpperCase().replace(/[^A-Z ]/g, '').replace(/ /g, '<');
   const dob = (data.dateNaissance || '000000').split('/').reverse().join('').substring(2, 8);
   const eid = (data.id || '').replace(/-/g, '').padEnd(9, '<').substring(0, 9);
 
-  doc.fontSize(7.5).fillColor(C.blanc).font('Courier')
-    .text(mrzLine(`ID<GIN${nom}<<${pre}`, 30), MARGE, mrzY + 20)
-    .text(mrzLine(`${eid}GIN${dob}0`, 30), MARGE, mrzY + 33);
+  doc.fontSize(7.5).fillColor(CARD.blanc).font('Courier')
+    .text(mrzLine(`ID<GIN${nom}<<${pre}`, 30), ML + 8, MRZ_Y + 17)
+    .text(mrzLine(`${eid}GIN${dob}0`, 30), ML + 8, MRZ_Y + 30);
 
-  // Site web
-  doc.fontSize(5.5).fillColor(C.grisF)
-    .text('www.identiguinee.gov.gn  —  Plateforme Nationale d\'Identité Numérique Sécurisée', 0, mrzY - 12, { align: 'center', width: W });
+  const hash = data.hashBlockchain || sigHash(data.id || '');
+  doc.fontSize(4).fillColor(CARD.bleuCl).font('Courier')
+    .text(`SHA-256: ${hash.substring(0, 40)}... | BLOC #${data.blockIndex || 0} | IDENTIGUINÉE`, ML + 8, MRZ_Y + 42);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PASSEPORT ÉLECTRONIQUE
+// PASSEPORT ÉLECTRONIQUE — A4 PORTRAIT BLEU MARINE (style OACI/CEDEAO)
 // ─────────────────────────────────────────────────────────────────────────────
-
 function genererPasseport(doc, data) {
   const W = 595, H = 842;
-  const BANDE = 16;
-  const MARGE = 38;
+  const ML = 42, MR = 42;
 
-  // Fond
-  doc.rect(0, 0, W, H).fill(C.nuit);
+  // ── Fond marine profond ───────────────────────────────────────────────────
+  doc.rect(0, 0, W, H).fill(PP.fond);
 
-  // Motif sécurité
+  // Motif guilloche (cercles concentriques discrets)
   doc.save();
-  doc.strokeColor('#0E1E32').lineWidth(0.4);
-  for (let i = -H; i < W + H; i += 24) doc.moveTo(i, 0).lineTo(i + H, H).stroke();
+  doc.strokeColor(PP.line).lineWidth(0.3).fillOpacity(0);
+  for (let r = 20; r < 350; r += 18) {
+    doc.circle(W / 2, 180, r).stroke();
+  }
   doc.restore();
 
-  // Bandes tricolores
-  bandeTricolore(doc, 0, W, BANDE);
-  bandeTricolore(doc, H - BANDE, W, BANDE);
+  // Lignes diagonales sécurité
+  doc.save();
+  doc.strokeColor('#182E50').lineWidth(0.35);
+  for (let i = -H; i < W + H; i += 28) {
+    doc.moveTo(i, 0).lineTo(i + H, H).stroke();
+  }
+  doc.restore();
 
-  // Drapeau (haut droite)
-  const flagW = 80, flagH = 50;
-  drapeauGuinee(doc, W - MARGE - flagW, BANDE + 14, flagW, flagH);
+  // ── Bandeau header ────────────────────────────────────────────────────────
+  doc.rect(0, 0, W, 130).fill(PP.fond2);
+  doc.rect(0, 128, W, 1.5).fill(PP.or);
 
-  // En-tête
-  const hY = BANDE + 12;
-  doc.fontSize(9).fillColor(C.orClair).font('Helvetica-Bold')
-    .text('PASSEPORT  /  PASSPORT', MARGE, hY, { width: W - MARGE * 2 - flagW - 12, align: 'center' });
-  doc.fontSize(7.5).fillColor(C.blanc)
-    .text('REPUBLIQUE DE GUINEE  /  REPUBLIC OF GUINEA', MARGE, hY + 14, { width: W - MARGE * 2 - flagW - 12, align: 'center' });
-  doc.fontSize(6).fillColor(C.gris)
-    .text('Travail — Justice — Solidarité', MARGE, hY + 26, { width: W - MARGE * 2 - flagW - 12, align: 'center' });
-  doc.rect(MARGE, hY + 40, W - MARGE * 2 - flagW - 12, 0.8).fill(C.or);
+  // Emblème officiel (cercles + texte, SANS drapeau)
+  const EX = W / 2, EY = 58;
+  doc.circle(EX, EY, 34).strokeColor(PP.or).lineWidth(1.2).fillOpacity(0).stroke();
+  doc.circle(EX, EY, 27).strokeColor(PP.or).lineWidth(0.4).stroke();
+  doc.circle(EX, EY, 11).fill(PP.or).fillOpacity(1);
+  doc.fontSize(5.5).fillColor(PP.fond2).font('Helvetica-Bold').text('GN', EX - 10, EY - 3.5, { width: 20, align: 'center' });
 
-  const sepY = BANDE + 70;
-  doc.rect(MARGE, sepY, W - MARGE * 2, 0.6).fill(C.or);
+  doc.fontSize(5.5).fillColor(PP.or).fillOpacity(1).font('Helvetica-Bold')
+    .text('• REPUBLIQUE DE GUINEE •', EX - 38, EY - 10, { width: 76, align: 'center' });
+  doc.fontSize(4.5).fillColor(PP.grisCl)
+    .text('TRAVAIL · JUSTICE · SOLIDARITÉ', EX - 38, EY + 1, { width: 76, align: 'center' });
 
-  // Photo
-  const pX = MARGE, pY = sepY + 14, pW = 140, pH = 175;
-  doc.rect(pX - 3, pY - 3, pW + 6, pH + 6).fill(C.or);
-  photoOuPlaceholder(doc, pX, pY, pW, pH, data.photoPath);
+  doc.fontSize(18).fillColor(PP.or).font('Helvetica-Bold')
+    .text('PASSEPORT', 0, 94, { align: 'center', width: W });
+  doc.fontSize(8).fillColor(PP.grisCl).font('Helvetica')
+    .text('PASSPORT', 0, 114, { align: 'center', width: W });
 
-  // Drapeau sous photo (passeport)
-  drapeauGuinee(doc, pX, pY + pH + 10, pW, 38);
-  doc.fontSize(5.5).fillColor(C.orClair).font('Helvetica-Bold')
-    .text('GUINÉE / GUINEA', pX, pY + pH + 52, { width: pW, align: 'center' });
-  sceau(doc, pX + pW / 2, pY + pH + 82, 24);
+  // ── Séparateur contenu ────────────────────────────────────────────────────
+  const sepY = 148;
+  doc.rect(ML, sepY, W - ML - MR, 0.5).fill(PP.accent);
 
-  // Informations
-  const iX = pX + pW + 22, iW = W - iX - MARGE;
-  let iY = sepY + 14;
+  // ── Photo ─────────────────────────────────────────────────────────────────
+  const PX = ML, PY = sepY + 16;
+  const PW = 138, PH = 172;
 
-  [
-    { label: 'NOM / SURNAME', val: (data.nom || '').toUpperCase(), bold: true },
-    { label: 'PRÉNOM(S) / GIVEN NAMES', val: data.prenoms },
-    { label: 'DATE DE NAISSANCE / DATE OF BIRTH', val: data.dateNaissance },
-    { label: 'LIEU DE NAISSANCE / PLACE OF BIRTH', val: (data.lieuNaissance || '').toUpperCase() },
-    { label: 'NATIONALITÉ / NATIONALITY', val: (data.nationalite || 'GUINÉENNE').toUpperCase() },
-    { label: 'SEXE / SEX', val: data.sexe === 'M' ? 'M — MASCULIN' : 'F — FÉMININ' },
-    { label: 'PROFESSION', val: data.profession || 'N/A' },
-  ].forEach((c, i) => {
-    if (i > 0) doc.rect(iX, iY - 4, iW, 0.3).fill(C.bleuClair);
-    champInfo(doc, c.label, c.val, iX, iY, iW, c.bold);
-    iY += 30;
+  doc.rect(PX - 2, PY - 2, PW + 4, PH + 4).fill(PP.or);
+  doc.rect(PX, PY, PW, PH).fill(PP.accent);
+  if (data.photoPath && fs.existsSync(data.photoPath)) {
+    try {
+      doc.image(data.photoPath, PX, PY, { width: PW, height: PH, cover: [PW, PH] });
+    } catch {}
+  } else {
+    doc.circle(PX + PW / 2, PY + PH * 0.3, PW * 0.2).fill('#3A6090');
+    doc.ellipse(PX + PW / 2, PY + PH * 0.65, PW * 0.27, PH * 0.2).fill('#3A6090');
+    doc.fontSize(6.5).fillColor(PP.grisCl).font('Helvetica')
+      .text("PHOTO", PX, PY + PH - 16, { width: PW, align: 'center' });
+  }
+
+  // ── Données biographiques ─────────────────────────────────────────────────
+  const IX = PX + PW + 22;
+  const IW = W - IX - MR;
+  let iY = sepY + 16;
+
+  function fieldPP(label, value, x, y, w, bold) {
+    doc.rect(x, y - 1, w, 0.3).fill(PP.line);
+    doc.fontSize(5.5).fillColor(PP.grisCl).font('Helvetica-Bold').text(label, x, y + 2);
+    doc.fontSize(bold ? 10.5 : 9.5)
+      .fillColor(PP.cream)
+      .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+      .text((value || 'N/A').toString(), x, y + 11, { width: w, ellipsis: true, lineBreak: false });
+  }
+
+  const fields = [
+    { l: 'NOM / SURNAME',                    v: (data.nom || '').toUpperCase(),               bold: true },
+    { l: 'PRÉNOM(S) / GIVEN NAMES',           v: data.prenoms },
+    { l: 'DATE DE NAISSANCE / DATE OF BIRTH', v: data.dateNaissance },
+    { l: 'LIEU DE NAISSANCE / PLACE OF BIRTH',v: (data.lieuNaissance || '').toUpperCase() },
+    { l: 'SEXE / SEX',                        v: data.sexe === 'M' ? 'M — MASCULIN' : 'F — FÉMININ' },
+    { l: 'NATIONALITÉ / NATIONALITY',         v: (data.nationalite || 'GUINÉENNE').toUpperCase() },
+    { l: 'PROFESSION',                        v: data.profession || 'N/A' },
+  ];
+
+  fields.forEach(f => {
+    fieldPP(f.l, f.v, IX, iY, IW, f.bold);
+    iY += f.bold ? 30 : 27;
   });
 
-  // N° Passeport
-  const idY = Math.max(iY + 8, pY + pH + 100);
-  doc.rect(MARGE, idY, W - MARGE * 2, 50).fill('#040C18');
-  cornerAccents(doc, MARGE, idY, W - MARGE * 2, 50);
-  doc.fontSize(7).fillColor(C.or).font('Helvetica-Bold')
-    .text('N° PASSEPORT  /  PASSPORT NO.', 0, idY + 9, { align: 'center', width: W });
-  doc.fontSize(20).fillColor(C.blanc).font('Helvetica-Bold')
-    .text(data.id || '', 0, idY + 21, { align: 'center', width: W });
+  // N° passeport
+  const NOPY = Math.max(iY + 8, PY + PH + 8);
+  doc.rect(ML, NOPY, W - ML - MR, 46).fill(PP.fond2);
+  doc.rect(ML, NOPY, W - ML - MR, 46).strokeColor(PP.or).lineWidth(0.5).stroke();
+  doc.fontSize(6.5).fillColor(PP.or).font('Helvetica-Bold')
+    .text('N° PASSEPORT / PASSPORT NO.', 0, NOPY + 8, { align: 'center', width: W });
+  doc.fontSize(20).fillColor(PP.cream).font('Helvetica-Bold')
+    .text(data.id || '', 0, NOPY + 19, { align: 'center', width: W });
 
   // Dates
-  const dY2 = idY + 58;
-  doc.fontSize(6).fillColor(C.or).font('Helvetica-Bold').text("DATE D'ÉMISSION", MARGE, dY2);
-  doc.fontSize(10).fillColor(C.blanc).font('Helvetica').text(data.dateEmission || '', MARGE, dY2 + 11);
-  doc.fontSize(6).fillColor(C.or).font('Helvetica-Bold').text("DATE D'EXPIRATION", W / 2, dY2);
-  doc.fontSize(10).fillColor(C.blanc).font('Helvetica').text(data.dateExpiration || '', W / 2, dY2 + 11);
+  const DY = NOPY + 54;
+  doc.fontSize(6).fillColor(PP.grisCl).font('Helvetica-Bold').text("DATE D'ÉMISSION", ML, DY);
+  doc.fontSize(10).fillColor(PP.cream).font('Helvetica').text(data.dateEmission || '', ML, DY + 10, { lineBreak: false });
+  doc.fontSize(6).fillColor(PP.grisCl).font('Helvetica-Bold').text("DATE D'EXPIRATION", W / 2, DY, { lineBreak: false });
+  doc.fontSize(10).fillColor(PP.cream).font('Helvetica').text(data.dateExpiration || '', W / 2, DY + 10, { lineBreak: false });
 
   // QR
   if (data.qrCodeDataUrl) {
     try {
       const qrBuf = Buffer.from(data.qrCodeDataUrl.split(',')[1], 'base64');
-      const qrX = W - MARGE - 80;
-      doc.rect(qrX - 3, dY2 - 3, 86, 86).fill(C.or);
-      doc.image(qrBuf, qrX, dY2, { width: 80, height: 80 });
+      const QX = W - MR - 80, QY = DY - 2;
+      doc.rect(QX - 3, QY - 3, 86, 86).fill(PP.or);
+      doc.image(qrBuf, QX, QY, { width: 80, height: 80 });
+      doc.fontSize(5).fillColor(PP.grisCl).font('Helvetica')
+        .text('SCAN TO VERIFY', QX - 3, QY + 83, { width: 86, align: 'center' });
     } catch {}
   }
 
-  // Signature
-  const sigY2 = dY2 + 38;
-  doc.rect(MARGE, sigY2, W - MARGE * 2, 0.4).fill(C.bleuClair);
-  doc.fontSize(6.5).fillColor(C.or).font('Helvetica-Bold')
-    .text('SIGNATURE NUMÉRIQUE  /  DIGITAL SIGNATURE', MARGE, sigY2 + 8);
-  signatureNumerique(doc, MARGE, sigY2 + 24, 210);
+  // Signature numérique
+  const SIGY = DY + 30;
+  doc.rect(ML, SIGY, W - ML - MR, 0.4).fill(PP.line);
+  doc.fontSize(6).fillColor(PP.grisCl).font('Helvetica-Bold')
+    .text('SIGNATURE NUMÉRIQUE / DIGITAL SIGNATURE', ML, SIGY + 8);
+  doc.save();
+  doc.strokeColor(PP.or).lineWidth(1).fillOpacity(0);
+  const sx = ML + 10, sy = SIGY + 25;
+  doc.moveTo(sx, sy)
+    .bezierCurveTo(sx + 14, sy - 8,  sx + 22, sy + 6,  sx + 38, sy - 3)
+    .bezierCurveTo(sx + 50, sy - 9,  sx + 58, sy + 5,  sx + 76, sy - 2)
+    .bezierCurveTo(sx + 88, sy - 8,  sx + 96, sy + 6,  sx + 116, sy - 2)
+    .bezierCurveTo(sx + 128, sy - 8, sx + 136, sy + 4, sx + 150, sy)
+    .stroke();
+  doc.restore();
 
   const hash = data.hashBlockchain || sigHash(data.id || '');
-  doc.fontSize(5).fillColor(C.gris).font('Courier')
-    .text(hash.substring(0, 40) + '...', MARGE, sigY2 + 54, { width: W - MARGE * 2 });
-  doc.fontSize(5.5).fillColor(C.vert)
-    .text(`✓ BLOC #${data.blockIndex || 0}  —  BLOCKCHAIN IDENTIGUINÉE  —  OACI COMPLIANT`, MARGE, sigY2 + 65);
+  doc.fontSize(4.5).fillColor(PP.grisCl).font('Courier')
+    .text(hash.substring(0, 48) + '...', ML, SIGY + 36, { width: W - ML - MR - 90 });
+  doc.fontSize(5.5).fillColor('#6EE7B7').font('Helvetica-Bold')
+    .text(`✓ BLOC #${data.blockIndex || 0}  —  BLOCKCHAIN IDENTIGUINÉE  —  OACI/ICAO COMPLIANT`, ML, SIGY + 47);
 
-  // MRZ
-  const mrzY = H - BANDE - 62;
-  doc.rect(0, mrzY - 2, W, 60).fill('#030A12');
-  doc.rect(0, mrzY - 2, W, 0.8).fill(C.or);
-  doc.fontSize(6.5).fillColor(C.or).font('Helvetica-Bold')
-    .text('ZONE DE LECTURE AUTOMATIQUE  /  MACHINE READABLE ZONE (OACI/ICAO)', 0, mrzY + 4, { align: 'center', width: W });
+  // ── Zone MRZ ──────────────────────────────────────────────────────────────
+  const MRZY = H - 80;
+  doc.rect(0, MRZY - 2, W, 82).fill('#030A14');
+  doc.rect(0, MRZY - 2, W, 0.8).fill(PP.or);
+
+  doc.fontSize(6.5).fillColor(PP.or).font('Helvetica-Bold')
+    .text('ZONE DE LECTURE AUTOMATIQUE  /  MACHINE READABLE ZONE (OACI/ICAO)', 0, MRZY + 5, { align: 'center', width: W });
 
   const nomP = (data.nom || '').toUpperCase().replace(/[^A-Z]/g, '');
   const preP = (data.prenoms || '').toUpperCase().replace(/[^A-Z ]/g, '').replace(/ /g, '<');
   const dobP = (data.dateNaissance || '000000').split('/').reverse().join('').substring(2, 8);
   const eidP = (data.id || '').replace(/-/g, '').padEnd(9, '<').substring(0, 9);
 
-  doc.fontSize(8).fillColor(C.blanc).font('Courier')
-    .text(mrzLine(`P<GIN${nomP}<<${preP}`, 44), MARGE, mrzY + 20)
-    .text(mrzLine(`${eidP}GIN${dobP}0<<<<<<<<<<<<`, 44), MARGE, mrzY + 36);
+  doc.fontSize(9).fillColor(PP.cream).font('Courier')
+    .text(mrzLine(`P<GIN${nomP}<<${preP}`, 44), ML, MRZY + 22)
+    .text(mrzLine(`${eidP}GIN${dobP}0<<<<<<<<<<<<`, 44), ML, MRZY + 40);
 
-  doc.fontSize(5.5).fillColor(C.grisF)
-    .text('www.identiguinee.gov.gn', 0, mrzY - 10, { align: 'center', width: W });
+  doc.fontSize(5.5).fillColor(PP.grisCl)
+    .text('www.identiguinee.gov.gn  —  Plateforme Nationale d\'Identité Biométrique', 0, MRZY + 60, { align: 'center', width: W });
 }
 
 module.exports = { generer };

@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../../../context/AuthContext';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
@@ -16,72 +18,88 @@ export default function LoginPage() {
     setErreur('');
     setChargement(true);
     try {
-      const { data } = await axios.post('/api/admin/login', form);
+      const { data } = await axios.post(`${API}/api/admin/login`, form);
       login(data.token, data.username);
       router.push('/admin');
-    } catch (e) {
-      setErreur(e.response?.data?.error || 'Erreur de connexion. Vérifiez vos identifiants.');
+    } catch (err) {
+      setErreur(err.response?.data?.error || 'Identifiants incorrects. Réessayez.');
     } finally {
       setChargement(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🛡️</div>
-          <h1 className="text-2xl font-bold text-white mb-1">Espace Administrateur</h1>
-          <p className="text-gray-400 text-sm">Accès réservé au personnel autorisé d'IdentiGuinée</p>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+
+        {/* Logo / titre */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🛡️</div>
+          <h1 className="font-display" style={{ fontSize: 24, fontWeight: 700, color: '#F0EDE8', marginBottom: 6 }}>
+            Espace Administrateur
+          </h1>
+          <p style={{ fontSize: 12, color: '#8A9BB5' }}>
+            Accès réservé au personnel autorisé d'IdentiGuinée
+          </p>
         </div>
 
-        <form onSubmit={soumettre} className="card-identite rounded-2xl p-8 space-y-5">
-          <div className="h-1 tricolore-bar rounded-full -mt-2 mb-6" />
+        {/* Formulaire */}
+        <form onSubmit={soumettre} className="card-elevated" style={{ padding: 32 }}>
 
-          <div>
-            <label className="label-field">Identifiant</label>
+          {/* Barre tricolore */}
+          <div className="tricolore" style={{ height: 4, borderRadius: 2, marginBottom: 28 }} />
+
+          {/* Champ identifiant */}
+          <div style={{ marginBottom: 20 }}>
+            <label className="field-label">Identifiant</label>
             <input
               type="text"
               value={form.username}
-              onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
               placeholder="admin"
-              className="input-field mt-1"
+              className="field-input"
               autoComplete="username"
               required
             />
           </div>
 
-          <div>
-            <label className="label-field">Mot de passe</label>
+          {/* Champ mot de passe */}
+          <div style={{ marginBottom: 24 }}>
+            <label className="field-label">Mot de passe</label>
             <input
               type="password"
               value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               placeholder="••••••••••••"
-              className="input-field mt-1"
+              className="field-input"
               autoComplete="current-password"
               required
             />
           </div>
 
+          {/* Erreur */}
           {erreur && (
-            <div className="statut-invalide rounded-lg p-3 text-sm">
+            <div className="statut-invalide" style={{ borderRadius: 3, padding: '10px 14px', marginBottom: 20, fontSize: 13 }}>
               ⚠️ {erreur}
             </div>
           )}
 
+          {/* Bouton */}
           <button
             type="submit"
             disabled={chargement}
-            className="btn-primaire w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-or"
+            style={{ width: '100%', fontSize: 13 }}
           >
-            {chargement ? '⏳ Connexion...' : 'Se connecter →'}
+            {chargement ? '⏳ Connexion en cours...' : 'Se connecter →'}
           </button>
 
-          <p className="text-center text-xs text-gray-600 pt-2">
-            Identifiants par défaut : <span className="font-mono text-gray-500">admin / IdentiGuinee2026</span>
+          <p style={{ textAlign: 'center', fontSize: 11, color: '#4A6080', marginTop: 20 }}>
+            Identifiants par défaut :{' '}
+            <span className="font-mono-ig" style={{ color: '#8A9BB5' }}>admin / IdentiGuinee2026</span>
           </p>
         </form>
+
       </div>
     </div>
   );

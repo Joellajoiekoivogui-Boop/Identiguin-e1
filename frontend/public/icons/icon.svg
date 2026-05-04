@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fond navy -->
+  <rect width="512" height="512" rx="80" fill="#0F2544"/>
+  <!-- Bande tricolore guinée en bas -->
+  <rect x="0" y="420" width="170" height="92" rx="0" fill="#CE1126"/>
+  <rect x="170" y="420" width="172" height="92" fill="#FCD116"/>
+  <rect x="342" y="420" width="170" height="92" rx="0" fill="#009460"/>
+  <!-- Masque arrondi bas -->
+  <rect x="0" y="420" width="512" height="12" fill="#0F2544"/>
+  <rect x="0" y="466" width="512" height="46" rx="0" fill="transparent"/>
+  <!-- Cercle emblème -->
+  <circle cx="256" cy="210" r="130" fill="none" stroke="#C8A830" stroke-width="6"/>
+  <circle cx="256" cy="210" r="90" fill="none" stroke="#C8A830" stroke-width="2"/>
+  <circle cx="256" cy="210" r="40" fill="#C8A830"/>
+  <!-- Lettres IG -->
+  <text x="256" y="225" font-family="Arial,sans-serif" font-weight="900" font-size="42" fill="#0F2544" text-anchor="middle">IG</text>
+  <!-- Étoiles -->
+  <circle cx="256" cy="68" r="7" fill="#C8A830"/>
+  <circle cx="384" cy="115" r="7" fill="#C8A830"/>
+  <circle cx="384" cy="305" r="7" fill="#C8A830"/>
+  <circle cx="256" cy="352" r="7" fill="#C8A830"/>
+  <circle cx="128" cy="305" r="7" fill="#C8A830"/>
+  <circle cx="128" cy="115" r="7" fill="#C8A830"/>
+  <!-- Bandes tricolores en bas visibles -->
+  <rect x="0" y="440" width="170" height="52" rx="0" fill="#CE1126"/>
+  <rect x="171" y="440" width="170" height="52" fill="#FCD116"/>
+  <rect x="342" y="440" width="170" height="52" fill="#009460"/>
+  <!-- Arrondi coins bas -->
+  <path d="M0 440 L0 492 Q0 512 20 512 L492 512 Q512 512 512 492 L512 440 Z" fill="transparent"/>
+</svg>

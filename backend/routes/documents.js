@@ -24,6 +24,7 @@ router.post('/create', upload.single('photo'), async (req, res) => {
     const {
       type, nom, prenoms, dateNaissance, lieuNaissance, sexe,
       nationalite, adresse, profession, situationMatrimoniale, email,
+      taille, couleurYeux, lieuDelivrance
     } = req.body;
 
     if (!nom || !prenoms || !dateNaissance || !type) {
@@ -52,6 +53,9 @@ router.post('/create', upload.single('photo'), async (req, res) => {
       profession,
       situationMatrimoniale,
       email,
+      taille,
+      couleurYeux,
+      lieuDelivrance,
       dateEmission: new Date().toLocaleDateString('fr-FR'),
       dateExpiration: new Date(
         new Date().setFullYear(new Date().getFullYear() + (type === 'passeport' ? 5 : 10))

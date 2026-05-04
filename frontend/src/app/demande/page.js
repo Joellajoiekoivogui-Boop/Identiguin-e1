@@ -6,22 +6,27 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const STEPS = ['Type', 'Informations', 'Photo & Envoi'];
 
 const FIELDS = [
-  { name: 'nom',                   label: 'Nom de famille',         type: 'text',   placeholder: 'DIALLO',             required: true,  full: false },
-  { name: 'prenoms',               label: 'Prénom(s)',               type: 'text',   placeholder: 'Mamadou Oumar',      required: true,  full: false },
-  { name: 'dateNaissance',         label: 'Date de naissance',      type: 'date',   required: true,                    full: false },
-  { name: 'lieuNaissance',         label: 'Lieu de naissance',      type: 'text',   placeholder: 'Conakry',            full: false },
-  { name: 'sexe',                  label: 'Sexe',                   type: 'select', options: [['M','Masculin'],['F','Féminin']], required: true, full: false },
-  { name: 'nationalite',           label: 'Nationalité',            type: 'text',   placeholder: 'Guinéenne',          full: false },
-  { name: 'adresse',               label: 'Adresse complète',       type: 'text',   placeholder: 'Quartier, Commune, Conakry', full: true },
-  { name: 'profession',            label: 'Profession',             type: 'text',   placeholder: 'Ex : Enseignant',    full: false },
-  { name: 'situationMatrimoniale', label: 'Situation matrimoniale', type: 'select', options: [['Célibataire','Célibataire'],['Marié(e)','Marié(e)'],['Divorcé(e)','Divorcé(e)'],['Veuf/Veuve','Veuf / Veuve']], full: false },
-  { name: 'email',                 label: 'Email (optionnel)',      type: 'email',  placeholder: 'vous@exemple.gn',    full: false },
+  { name: 'nom',                   label: 'Nom de famille',          type: 'text',   placeholder: 'DIALLO',                   required: true,  full: false },
+  { name: 'prenoms',               label: 'Prénom(s)',                type: 'text',   placeholder: 'Mamadou Oumar',            required: true,  full: false },
+  { name: 'dateNaissance',         label: 'Date de naissance',       type: 'date',   required: true,                          full: false },
+  { name: 'lieuNaissance',         label: 'Lieu de naissance',       type: 'text',   placeholder: 'Conakry',                  required: true,  full: false },
+  { name: 'sexe',                  label: 'Sexe',                    type: 'select', options: [['M','Masculin'],['F','Féminin']], required: true, full: false },
+  { name: 'taille',                label: 'Taille',                  type: 'text',   placeholder: 'Ex : 1m75',                required: false, full: false },
+  { name: 'nationalite',           label: 'Nationalité',             type: 'text',   placeholder: 'Guinéenne',                full: false },
+  { name: 'couleurYeux',           label: 'Couleur des yeux',        type: 'select',
+    options: [['MARRON','Marron'],['NOIR','Noir'],['NOISETTE','Noisette'],['VERT','Vert'],['BLEU','Bleu'],['GRIS','Gris']], full: false },
+  { name: 'adresse',               label: 'Adresse complète',        type: 'text',   placeholder: 'Quartier, Commune, Conakry', full: true },
+  { name: 'profession',            label: 'Profession / Occupation', type: 'text',   placeholder: 'Ex : Enseignant',          full: false },
+  { name: 'situationMatrimoniale', label: 'Situation matrimoniale',  type: 'select',
+    options: [['Célibataire','Célibataire'],['Marié(e)','Marié(e)'],['Divorcé(e)','Divorcé(e)'],['Veuf/Veuve','Veuf / Veuve']], full: false },
+  { name: 'lieuDelivrance',        label: 'Lieu de délivrance',      type: 'text',   placeholder: 'Conakry',                  full: false },
+  { name: 'email',                 label: 'Email (optionnel)',        type: 'email',  placeholder: 'vous@exemple.gn',          full: false },
 ];
 
 export default function DemandePage() {
   const [step,    setStep]    = useState(0);
   const [type,    setType]    = useState('');
-  const [form,    setForm]    = useState({ nationalite: 'Guinéenne' });
+  const [form,    setForm]    = useState({ nationalite: 'Guinéenne', lieuDelivrance: 'Conakry' });
   const [photo,   setPhoto]   = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -44,13 +49,14 @@ export default function DemandePage() {
     if (step === 1 && !form.nom?.trim())     return setError('Le nom est obligatoire.'), false;
     if (step === 1 && !form.prenoms?.trim()) return setError('Les prénoms sont obligatoires.'), false;
     if (step === 1 && !form.dateNaissance)   return setError('La date de naissance est obligatoire.'), false;
+    if (step === 1 && !form.lieuNaissance?.trim()) return setError('Le lieu de naissance est obligatoire.'), false;
     if (step === 1 && !form.sexe)            return setError('Le sexe est obligatoire.'), false;
     return true;
   };
 
   const next  = () => { if (validate()) setStep(s => s + 1); };
   const prev  = () => { setStep(s => s - 1); setError(''); };
-  const reset = () => { setStep(0); setType(''); setForm({ nationalite: 'Guinéenne' }); setPhoto(null); setPreview(null); setResult(null); setError(''); };
+  const reset = () => { setStep(0); setType(''); setForm({ nationalite: 'Guinéenne', lieuDelivrance: 'Conakry' }); setPhoto(null); setPreview(null); setResult(null); setError(''); };
 
   const submit = async () => {
     if (!validate()) return;
@@ -172,9 +178,14 @@ export default function DemandePage() {
                       { l: 'Type',        v: type === 'carte' ? "Carte d'Identité" : 'Passeport' },
                       { l: 'Nom complet', v: `${form.prenoms || ''} ${(form.nom || '').toUpperCase()}`.trim() },
                       { l: 'Naissance',   v: form.dateNaissance || '—' },
+                      { l: 'Lieu naiss.', v: form.lieuNaissance || '—' },
                       { l: 'Nationalité', v: form.nationalite || 'Guinéenne' },
+                      { l: 'Taille',      v: form.taille || '—' },
+                      { l: 'Yeux',        v: form.couleurYeux || '—' },
+                      { l: 'Autorité',    v: form.lieuDelivrance || '—' },
+                      { l: 'Adresse',     v: form.adresse || '—' },
                     ].map(r => (
-                      <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                      <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #F1F5F9' }}>
                         <span style={{ fontSize: 11, color: '#94A3B8' }}>{r.l}</span>
                         <span style={{ fontSize: 11, color: '#0F172A', fontWeight: 500, textAlign: 'right', maxWidth: 180 }}>{r.v}</span>
                       </div>

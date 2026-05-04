@@ -1,0 +1,40 @@
+{
+  "name": "IdentiGuinée",
+  "short_name": "IdentiGuinée",
+  "description": "Plateforme nationale de délivrance de cartes d'identité et passeports biométriques sécurisée par blockchain.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0F2544",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "categories": ["government", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Faire une demande",
+      "short_name": "Demande",
+      "url": "/demande",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Vérifier un document",
+      "short_name": "Vérifier",
+      "url": "/verification",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

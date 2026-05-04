@@ -1,46 +1,60 @@
-# Guide de Déploiement - IdentiGuinée
+# 🚀 DÉPLOIEMENT COMPLET - IdentiGuinée
 
-## Backend sur Railway
+## ✅ ÉTAPE 1: BACKEND (Railway)
 
-### Option 1 : Déploiement en 1 clic (Recommandé)
-[🚀 Déployer sur Railway](https://railway.app/new?repo=https://github.com/Joellajoiekoivogui-Boop/Identiguin-e1&plugins=postgresql)
+**LIEN DIRECT:** https://railway.app/new?repo=https://github.com/Joellajoiekoivogui-Boop/Identiguin-e1
 
-### Option 2 : Déploiement manuel
-1. Accède à https://railway.app
-2. Clique "New Project"
-3. Sélectionne "Deploy from GitHub"
-4. Choisis le repository `Identiguin-e1`
-5. Railway détectera automatiquement `railway.json`
-6. Ajoute les variables d'environnement dans Railway Dashboard:
-   - `JWT_SECRET` = ta clé secrète
-   - `FRONTEND_URL` = URL du frontend Vercel
-7. Déploie
+### Instructions:
+1. **Clique le lien ci-dessus**
+2. **Connecte-toi avec GitHub** (si demandé)
+3. **Clique "Deploy"**
+4. **Attends 2-3 minutes**
+5. **Copie l'URL générée** (ex: `https://identiguin-e1-production.railway.app`)
 
-### Récupérer l'URL du backend
-Après le déploiement, Railway génère une URL publique (ex: `https://identiguinee-production.railway.app`)
+### Variables d'environnement à ajouter:
+Dans Railway Dashboard → Variables:
+- `JWT_SECRET` = `identiguinee_jwt_secret_2024_secure_key`
+- `FRONTEND_URL` = URL du frontend Vercel (à ajouter après)
 
 ---
 
-## Frontend sur Vercel
+## ✅ ÉTAPE 2: FRONTEND (Vercel)
 
-1. Accède à https://vercel.com
-2. Clique "New Project"
-3. Importe le repository GitHub `Identiguin-e1`
-4. Configure le dossier root → `frontend`
-5. Ajoute la variable d'environnement:
-   - `NEXT_PUBLIC_API_URL` = l'URL du backend Railway
-6. Déploie
+**LIEN DIRECT:** https://vercel.com/new?repo=https://github.com/Joellajoiekoivogui-Boop/Identiguin-e1
 
----
-
-## Après le déploiement
-
-Mets à jour le backend avec l'URL du frontend:
-- Variable Railway: `FRONTEND_URL` = URL Vercel du frontend
+### Instructions:
+1. **Clique le lien ci-dessus**
+2. **Connecte-toi avec GitHub** (si demandé)
+3. **Configure le projet:**
+   - **Root Directory:** `frontend`
+   - **Framework Preset:** Next.js
+4. **Ajoute les variables d'environnement:**
+   - `NEXT_PUBLIC_API_URL` = URL du backend Railway (ex: `https://identiguin-e1-production.railway.app`)
+5. **Clique "Deploy"**
+6. **Attends 1-2 minutes**
 
 ---
 
-## Vérification
+## ✅ ÉTAPE 3: FINALISATION
 
-- Backend: `https://your-railway-url/api/health`
-- Frontend: `https://your-vercel-url`
+1. **Retourne sur Railway**
+2. **Ajoute la variable:** `FRONTEND_URL` = URL Vercel (ex: `https://identiguin-e1.vercel.app`)
+
+---
+
+## 🎯 RÉSULTAT FINAL
+
+**Frontend:** `https://identiguin-e1.vercel.app`
+**Backend:** `https://identiguin-e1-production.railway.app`
+
+**Test:** Va sur le frontend et vérifie que l'API fonctionne!
+
+---
+
+## 🔧 SI PROBLÈMES
+
+- **Railway:** Vérifie que ton repo est public
+- **Vercel:** Assure-toi que le dossier `frontend` est bien sélectionné
+- **Variables:** Les variables sont sensibles à la casse
+
+**Besoin d'aide?** Dis-moi à quelle étape tu bloques!

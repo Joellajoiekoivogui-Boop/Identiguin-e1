@@ -250,17 +250,6 @@ function genererCarte(doc, data) {
       const QX=FPX+FPW+6, QY=vY, QS=56;
       doc.image(qrBuf, QX,QY, {width:QS,height:QS});
       doc.fontSize(3.5).fillColor('#666').text('VÉRIFIER EN LIGNE', QX, QY+QS+2, {width:QS,align:'center'});
-      // Hash
-      const HX=QX+QS+6, HW=VDW-FPW-6-QS-6;
-      if (HW>20 && data.hashBlockchain) {
-        doc.fontSize(3.5).fillColor('#757575').font('Helvetica').text('Blockchain SHA-256', HX, vY);
-        doc.fontSize(3.2).fillColor('#0A0D12').font('Courier')
-          .text(data.hashBlockchain.substring(0,28), HX, vY+7, {width:HW});
-        doc.fontSize(3.2).fillColor('#0A0D12').font('Courier')
-          .text(data.hashBlockchain.substring(28,56), HX, vY+14, {width:HW});
-        doc.fontSize(3.5).fillColor('#757575').font('Helvetica')
-          .text(`Bloc #${data.blockIndex||0}`, HX, vY+22);
-      }
     } catch {}
   }
 
@@ -285,7 +274,7 @@ function genererCarte(doc, data) {
   doc.fontSize(7.5).fillColor('#2D3748').font('Helvetica-Bold')
     .text("CARTE NATIONALE D'IDENTITÉ BIOMÉTRIQUE — RECTO / VERSO", RX, RY+CH+10);
   doc.fontSize(5.5).fillColor('#718096').font('Helvetica')
-    .text(`IdentiGuinée · Bloc #${data.blockIndex||0} · Émis le ${formatDate(data.dateEmission)}`, RX, RY+CH+20);
+    .text(`IdentiGuinée · Émis le ${formatDate(data.dateEmission)}`, RX, RY+CH+20);
 }
 
 function genererPasseport(doc, data) {

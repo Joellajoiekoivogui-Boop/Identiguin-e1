@@ -1,26 +1,47 @@
 'use client';
 import { useEffect, useState } from 'react';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005';
+
+async function fetchAndSync() {
+  try {
+    const res = await fetch(`${API}/api/documents/snapshot`);
+    if (!res.ok) return;
+    const { snapshot, syncedAt } = await res.json();
+    const { syncSnapshot } = await import('../utils/offlineDB');
+    await syncSnapshot(snapshot, syncedAt);
+  } catch { /* hors ligne — silencieux */ }
+}
+
 export default function PWAInstall() {
-  const [prompt, setPrompt] = useState(null);
-  const [visible, setVisible] = useState(false);
+  const [prompt,    setPrompt]    = useState(null);
+  const [visible,   setVisible]   = useState(false);
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    // Register service worker
+    // Enregistrement du service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // Capture install prompt
-    const handler = (e) => { e.preventDefault(); setPrompt(e); setVisible(true); };
-    window.addEventListener('beforeinstallprompt', handler);
+    // Synchronisation du snapshot offline au démarrage
+    fetchAndSync();
 
-    // Detect if already installed
+    // Re-sync automatique quand la connexion revient
+    window.addEventListener('online', fetchAndSync);
+
+    // Capture du prompt d'installation PWA
+    const onPrompt = e => { e.preventDefault(); setPrompt(e); setVisible(true); };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+
+    // Détection app déjà installée
     if (window.matchMedia('(display-mode: standalone)').matches) setInstalled(true);
     window.addEventListener('appinstalled', () => { setInstalled(true); setVisible(false); });
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('online', fetchAndSync);
+    };
   }, []);
 
   const install = async () => {

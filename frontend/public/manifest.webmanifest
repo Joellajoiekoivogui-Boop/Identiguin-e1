@@ -25,15 +25,21 @@
   ],
   "shortcuts": [
     {
-      "name": "Faire une demande",
-      "short_name": "Demande",
-      "url": "/demande",
-      "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
-    },
-    {
       "name": "Vérifier un document",
       "short_name": "Vérifier",
       "url": "/verification",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Espace Citoyen",
+      "short_name": "Citoyen",
+      "url": "/citoyen",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Faire une demande",
+      "short_name": "Demande",
+      "url": "/demande",
       "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]

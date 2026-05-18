@@ -3,35 +3,38 @@ import { useState, useRef } from 'react';
 import axios from 'axios';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const STEPS = ['Type', 'Informations', 'Photo & Envoi'];
+const STEPS = ['Acte de naissance', 'Type', 'Informations', 'Photo & Envoi'];
 
 const FIELDS = [
-  { name: 'nom',                   label: 'Nom de famille',          type: 'text',   placeholder: 'DIALLO',                   required: true,  full: false },
-  { name: 'prenoms',               label: 'Prénom(s)',                type: 'text',   placeholder: 'Mamadou Oumar',            required: true,  full: false },
-  { name: 'dateNaissance',         label: 'Date de naissance',       type: 'date',   required: true,                          full: false },
-  { name: 'lieuNaissance',         label: 'Lieu de naissance',       type: 'text',   placeholder: 'Conakry',                  required: true,  full: false },
-  { name: 'sexe',                  label: 'Sexe',                    type: 'select', options: [['M','Masculin'],['F','Féminin']], required: true, full: false },
-  { name: 'taille',                label: 'Taille',                  type: 'text',   placeholder: 'Ex : 1m75',                required: false, full: false },
-  { name: 'nationalite',           label: 'Nationalité',             type: 'text',   placeholder: 'Guinéenne',                full: false },
+  { name: 'nom',                   label: 'Nom de famille',          type: 'text',   placeholder: 'DIALLO',                     required: true,  full: false, fromActe: true },
+  { name: 'prenoms',               label: 'Prénom(s)',                type: 'text',   placeholder: 'Mamadou Oumar',              required: true,  full: false, fromActe: true },
+  { name: 'dateNaissance',         label: 'Date de naissance',       type: 'date',   required: true,                            full: false,     fromActe: true },
+  { name: 'lieuNaissance',         label: 'Lieu de naissance',       type: 'text',   placeholder: 'Conakry',                    required: true,  full: false, fromActe: true },
+  { name: 'sexe',                  label: 'Sexe',                    type: 'select', options: [['M','Masculin'],['F','Féminin']], required: true, full: false, fromActe: true },
+  { name: 'taille',                label: 'Taille',                  type: 'text',   placeholder: 'Ex : 1m75',                  required: false, full: false },
+  { name: 'nationalite',           label: 'Nationalité',             type: 'text',   placeholder: 'Guinéenne',                  full: false },
   { name: 'couleurYeux',           label: 'Couleur des yeux',        type: 'select',
     options: [['MARRON','Marron'],['NOIR','Noir'],['NOISETTE','Noisette'],['VERT','Vert'],['BLEU','Bleu'],['GRIS','Gris']], full: false },
   { name: 'adresse',               label: 'Adresse complète',        type: 'text',   placeholder: 'Quartier, Commune, Conakry', full: true },
-  { name: 'profession',            label: 'Profession / Occupation', type: 'text',   placeholder: 'Ex : Enseignant',          full: false },
+  { name: 'profession',            label: 'Profession / Occupation', type: 'text',   placeholder: 'Ex : Enseignant',            full: false },
   { name: 'situationMatrimoniale', label: 'Situation matrimoniale',  type: 'select',
     options: [['Célibataire','Célibataire'],['Marié(e)','Marié(e)'],['Divorcé(e)','Divorcé(e)'],['Veuf/Veuve','Veuf / Veuve']], full: false },
-  { name: 'lieuDelivrance',        label: 'Lieu de délivrance',      type: 'text',   placeholder: 'Conakry',                  full: false },
-  { name: 'email',                 label: 'Email (optionnel)',        type: 'email',  placeholder: 'vous@exemple.gn',          full: false },
+  { name: 'lieuDelivrance',        label: 'Lieu de délivrance',      type: 'text',   placeholder: 'Conakry',                    full: false },
+  { name: 'email',                 label: 'Email (optionnel)',        type: 'email',  placeholder: 'vous@exemple.gn',            full: false },
 ];
 
 export default function DemandePage() {
-  const [step,    setStep]    = useState(0);
-  const [type,    setType]    = useState('');
-  const [form,    setForm]    = useState({ nationalite: 'Guinéenne', lieuDelivrance: 'Conakry' });
-  const [photo,   setPhoto]   = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
-  const [error,   setError]   = useState('');
+  const [step,        setStep]        = useState(0);
+  const [type,        setType]        = useState('');
+  const [form,        setForm]        = useState({ nationalite: 'Guinéenne', lieuDelivrance: 'Conakry' });
+  const [photo,       setPhoto]       = useState(null);
+  const [preview,     setPreview]     = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [result,      setResult]      = useState(null);
+  const [error,       setError]       = useState('');
+  const [numeroActe,  setNumeroActe]  = useState('');
+  const [acteData,    setActeData]    = useState(null);
+  const [acteLoading, setActeLoading] = useState(false);
   const fileRef = useRef();
 
   const onChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -45,35 +48,77 @@ export default function DemandePage() {
 
   const validate = () => {
     setError('');
-    if (step === 0 && !type)                 return setError('Sélectionnez un type de document.'), false;
-    if (step === 1 && !form.nom?.trim())     return setError('Le nom est obligatoire.'), false;
-    if (step === 1 && !form.prenoms?.trim()) return setError('Les prénoms sont obligatoires.'), false;
-    if (step === 1 && !form.dateNaissance)   return setError('La date de naissance est obligatoire.'), false;
-    if (step === 1 && !form.lieuNaissance?.trim()) return setError('Le lieu de naissance est obligatoire.'), false;
-    if (step === 1 && !form.sexe)            return setError('Le sexe est obligatoire.'), false;
+    if (step === 1 && !type)                      return setError('Sélectionnez un type de document.'), false;
+    if (step === 2 && !form.nom?.trim())           return setError('Le nom est obligatoire.'), false;
+    if (step === 2 && !form.prenoms?.trim())       return setError('Les prénoms sont obligatoires.'), false;
+    if (step === 2 && !form.dateNaissance)         return setError('La date de naissance est obligatoire.'), false;
+    if (step === 2 && !form.lieuNaissance?.trim()) return setError('Le lieu de naissance est obligatoire.'), false;
+    if (step === 2 && !form.sexe)                  return setError('Le sexe est obligatoire.'), false;
     return true;
   };
 
-  const next  = () => { if (validate()) setStep(s => s + 1); };
-  const prev  = () => { setStep(s => s - 1); setError(''); };
-  const reset = () => { setStep(0); setType(''); setForm({ nationalite: 'Guinéenne', lieuDelivrance: 'Conakry' }); setPhoto(null); setPreview(null); setResult(null); setError(''); };
+  const next = async () => {
+    setError('');
+    if (step === 0) {
+      if (!numeroActe.trim()) {
+        setError("Veuillez saisir votre numéro d'acte de naissance.");
+        return;
+      }
+      setActeLoading(true);
+      try {
+        const { data } = await axios.get(`${API}/api/actes-naissance/${numeroActe.trim().toUpperCase()}`);
+        setActeData(data);
+        setForm(f => ({
+          ...f,
+          nom: data.nom,
+          prenoms: data.prenoms,
+          dateNaissance: data.dateNaissance,
+          lieuNaissance: data.lieuNaissance,
+          sexe: data.sexe,
+        }));
+        setStep(1);
+      } catch (e) {
+        setError(e.response?.data?.error || "Numéro d'acte introuvable dans le registre civil.");
+      } finally {
+        setActeLoading(false);
+      }
+      return;
+    }
+    if (validate()) setStep(s => s + 1);
+  };
+
+  const prev = () => {
+    setStep(s => s - 1);
+    setError('');
+    if (step === 1) { setActeData(null); setForm({ nationalite: 'Guinéenne', lieuDelivrance: 'Conakry' }); }
+  };
+
+  const reset = () => {
+    setStep(0); setType('');
+    setForm({ nationalite: 'Guinéenne', lieuDelivrance: 'Conakry' });
+    setPhoto(null); setPreview(null); setResult(null); setError('');
+    setNumeroActe(''); setActeData(null);
+  };
 
   const submit = async () => {
     if (!validate()) return;
     setLoading(true); setError('');
     const payload = new FormData();
     payload.append('type', type);
+    payload.append('numeroActeNaissance', numeroActe);
     Object.entries(form).forEach(([k, v]) => payload.append(k, v || ''));
     if (photo) payload.append('photo', photo);
     try {
       const { data } = await axios.post(`${API}/api/documents/create`, payload, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setResult(data); setStep(3);
+      setResult(data); setStep(4);
     } catch (e) {
       setError(e.response?.data?.error || 'Erreur de connexion au serveur.');
     } finally { setLoading(false); }
   };
+
+  const sexeLabel = v => v === 'M' ? 'Masculin' : v === 'F' ? 'Féminin' : v;
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F7FA', padding: '40px 24px' }}>
@@ -89,7 +134,7 @@ export default function DemandePage() {
         </div>
 
         {/* Indicateur étapes */}
-        {step < 3 && (
+        {step < 4 && (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, background: '#fff', border: '1px solid #E2E8F0', borderRadius: 6, padding: '14px 20px', overflowX: 'auto' }}>
             {STEPS.map((s, i) => (
               <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? 1 : 'none', minWidth: 0 }}>
@@ -104,8 +149,43 @@ export default function DemandePage() {
         {/* Carte principale */}
         <div className="card card-pad" style={{ padding: 32 }}>
 
-          {/* ── Étape 0 : Type ── */}
+          {/* ── Étape 0 : Acte de naissance ── */}
           {step === 0 && (
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748B', marginBottom: 8 }}>
+                Vérification de l'acte de naissance
+              </p>
+              <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24 }}>
+                Saisissez votre numéro d'acte de naissance délivré par la mairie ou le centre d'état civil. Vos données seront vérifiées contre le registre civil national avant toute émission de document.
+              </p>
+
+              <div style={{ marginBottom: 20 }}>
+                <label className="field-label">
+                  Numéro d'acte de naissance <span style={{ color: '#EF4444', marginLeft: 3 }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={numeroActe}
+                  onChange={e => setNumeroActe(e.target.value.toUpperCase())}
+                  placeholder="Ex : AN-2015-000001"
+                  className="field-input"
+                  style={{ fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                  onKeyDown={e => e.key === 'Enter' && next()}
+                />
+                <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 6 }}>
+                  Format : AN-AAAA-XXXXXX — disponible sur votre acte de naissance original
+                </p>
+              </div>
+
+              <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 6, padding: '12px 16px', fontSize: 12, color: '#92400E', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16 }}>⚠</span>
+                <span>Si vos données personnelles ne correspondent pas à votre acte de naissance enregistré dans le registre civil, la délivrance du document sera <strong>refusée automatiquement</strong>.</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Étape 1 : Type ── */}
+          {step === 1 && (
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748B', marginBottom: 20 }}>Sélectionnez le type de document</p>
               <div className="type-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -131,30 +211,65 @@ export default function DemandePage() {
             </div>
           )}
 
-          {/* ── Étape 1 : Infos ── */}
-          {step === 1 && (
+          {/* ── Étape 2 : Infos ── */}
+          {step === 2 && (
             <div>
-              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748B', marginBottom: 20 }}>Informations personnelles</p>
+              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748B', marginBottom: 4 }}>Informations personnelles</p>
+
+              {acteData && (
+                <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 6, padding: '10px 14px', fontSize: 12, color: '#047857', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>🔒</span>
+                  <span>Les champs <strong>verrouillés</strong> proviennent de l'acte de naissance <strong>{acteData.numero}</strong> et ne peuvent pas être modifiés.</span>
+                </div>
+              )}
+
               <div className="rg-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 20px' }}>
-                {FIELDS.map(f => (
-                  <div key={f.name} style={{ gridColumn: f.full ? '1/-1' : undefined }}>
-                    <label className="field-label">{f.label}{f.required && <span style={{ color: '#EF4444', marginLeft: 3 }}>*</span>}</label>
-                    {f.type === 'select' ? (
-                      <select name={f.name} value={form[f.name] || ''} onChange={onChange} className="field-input">
-                        <option value="">— Sélectionner —</option>
-                        {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                      </select>
-                    ) : (
-                      <input type={f.type} name={f.name} value={form[f.name] || ''} onChange={onChange} placeholder={f.placeholder} className="field-input" />
-                    )}
-                  </div>
-                ))}
+                {FIELDS.map(f => {
+                  const locked = f.fromActe && acteData;
+                  return (
+                    <div key={f.name} style={{ gridColumn: f.full ? '1/-1' : undefined }}>
+                      <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {f.label}
+                        {f.required && <span style={{ color: '#EF4444' }}>*</span>}
+                        {locked && (
+                          <span style={{ fontSize: 10, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>
+                            🔒 Acte de naissance
+                          </span>
+                        )}
+                      </label>
+                      {f.type === 'select' ? (
+                        <select
+                          name={f.name}
+                          value={form[f.name] || ''}
+                          onChange={onChange}
+                          className="field-input"
+                          disabled={!!locked}
+                          style={locked ? { background: '#F1F5F9', color: '#475569', cursor: 'not-allowed', border: '1px solid #CBD5E1' } : {}}
+                        >
+                          <option value="">— Sélectionner —</option>
+                          {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          type={f.type}
+                          name={f.name}
+                          value={form[f.name] || ''}
+                          onChange={onChange}
+                          placeholder={f.placeholder}
+                          className="field-input"
+                          readOnly={!!locked}
+                          style={locked ? { background: '#F1F5F9', color: '#475569', cursor: 'not-allowed', border: '1px solid #CBD5E1' } : {}}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* ── Étape 2 : Photo ── */}
-          {step === 2 && (
+          {/* ── Étape 3 : Photo ── */}
+          {step === 3 && (
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748B', marginBottom: 4 }}>Photo d'identité biométrique</p>
               <p style={{ fontSize: 12, color: '#64748B', marginBottom: 20 }}>Fond uni clair, visage bien visible, JPG/PNG, max 5 Mo.</p>
@@ -175,10 +290,12 @@ export default function DemandePage() {
                   <div style={{ border: '1px solid #E2E8F0', borderRadius: 6, padding: 16, marginBottom: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#0F2544', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Récapitulatif</div>
                     {[
+                      { l: 'Acte',        v: numeroActe },
                       { l: 'Type',        v: type === 'carte' ? "Carte d'Identité" : 'Passeport' },
                       { l: 'Nom complet', v: `${form.prenoms || ''} ${(form.nom || '').toUpperCase()}`.trim() },
                       { l: 'Naissance',   v: form.dateNaissance || '—' },
                       { l: 'Lieu naiss.', v: form.lieuNaissance || '—' },
+                      { l: 'Sexe',        v: sexeLabel(form.sexe) || '—' },
                       { l: 'Nationalité', v: form.nationalite || 'Guinéenne' },
                       { l: 'Taille',      v: form.taille || '—' },
                       { l: 'Yeux',        v: form.couleurYeux || '—' },
@@ -199,8 +316,8 @@ export default function DemandePage() {
             </div>
           )}
 
-          {/* ── Étape 3 : Succès ── */}
-          {step === 3 && result && (
+          {/* ── Étape 4 : Succès ── */}
+          {step === 4 && result && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#ECFDF5', border: '2px solid #A7F3D0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 20px' }}>✅</div>
               <h2 className="font-display" style={{ fontSize: 'clamp(20px,3vw,24px)', fontWeight: 700, color: '#0F172A', marginBottom: 8 }}>Document généré avec succès</h2>
@@ -247,12 +364,16 @@ export default function DemandePage() {
           )}
 
           {/* Navigation */}
-          {step < 3 && (
+          {step < 4 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 28, paddingTop: 20, borderTop: '1px solid #E2E8F0', gap: 12 }}>
               <button onClick={prev} disabled={step === 0} className="btn btn-ghost" style={{ opacity: step === 0 ? 0.3 : 1 }}>← Précédent</button>
-              {step < 2
-                ? <button onClick={next} className="btn btn-primary">Suivant →</button>
-                : <button onClick={submit} disabled={loading} className="btn btn-primary">{loading ? '⏳ Génération...' : 'Générer mon document →'}</button>
+              {step < 3
+                ? <button onClick={next} disabled={acteLoading} className="btn btn-primary">
+                    {acteLoading ? '⏳ Vérification...' : 'Suivant →'}
+                  </button>
+                : <button onClick={submit} disabled={loading} className="btn btn-primary">
+                    {loading ? '⏳ Génération...' : 'Générer mon document →'}
+                  </button>
               }
             </div>
           )}
@@ -266,6 +387,7 @@ export default function DemandePage() {
           .success-btns { flex-direction: column !important; }
           .success-btns a { text-align: center; }
           .card-pad     { padding: 20px !important; }
+          .rg-photo     { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>

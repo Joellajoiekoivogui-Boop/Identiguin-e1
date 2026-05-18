@@ -2,6 +2,7 @@ import './globals.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import PWAInstall from '../components/PWAInstall';
+import OfflineBanner from '../components/OfflineBanner';
 import { AuthProvider } from '../context/AuthContext';
 
 export const metadata = {
@@ -41,6 +42,7 @@ export default function RootLayout({ children }) {
       <body className="min-h-screen flex flex-col bg-nuit">
         <AuthProvider>
           <Header />
+          <OfflineBanner />
           <main className="flex-1">{children}</main>
           <Footer />
           <PWAInstall />

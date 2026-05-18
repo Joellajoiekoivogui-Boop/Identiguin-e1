@@ -2,9 +2,32 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
+import { getDocumentOffline } from '../../utils/offlineDB';
 
 const QRScanner = lazy(() => import('../../components/QRScanner'));
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005';
+
+function buildOfflineResult(doc) {
+  const now = new Date();
+  const [d, m, y] = (doc.dateExpiration || '').split('/');
+  const exp = y ? new Date(`${y}-${m}-${d}`) : null;
+  const joursRestants = exp ? Math.ceil((exp - now) / 86400000) : null;
+  const statut = doc.statut === 'RÉVOQUÉ' ? 'RÉVOQUÉ'
+    : (joursRestants !== null && joursRestants < 0 ? 'EXPIRÉ' : 'VALIDE');
+  return {
+    valide: statut === 'VALIDE',
+    statut,
+    documentId: doc.id,
+    type: doc.type,
+    titulaire: { nom: doc.nom, prenoms: doc.prenoms, dateNaissance: doc.dateNaissance, nationalite: doc.nationalite },
+    dateEmission: doc.dateEmission,
+    dateExpiration: doc.dateExpiration,
+    joursRestants,
+    renouvellementDe: null,
+    blockchain: { hash: doc.hash, blockIndex: doc.blockIndex, timestamp: doc.timestamp, integrite: null },
+    _fromCache: true,
+  };
+}
 
 const STATUTS = {
   VALIDE:  { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46', icon: '✅', label: 'DOCUMENT VALIDE' },
@@ -47,7 +70,14 @@ function VerifContenu() {
       const { data } = await axios.get(`${API}/api/verification/${q}`);
       setResult(data); setId(q);
     } catch (e) {
-      setError(e.response?.data?.error || 'Impossible de joindre le serveur.');
+      const isOffline = !navigator.onLine || e.response?.data?.offline === true || !e.response;
+      if (isOffline) {
+        const cached = await getDocumentOffline(q);
+        if (cached) { setResult(buildOfflineResult(cached)); setId(q); return; }
+        setError('Hors ligne et document non trouvé en cache local.');
+      } else {
+        setError(e.response?.data?.error || 'Impossible de joindre le serveur.');
+      }
     } finally { setLoading(false); }
   };
 
@@ -107,7 +137,28 @@ function VerifContenu() {
         {/* Résultat */}
         {result && (
           <div>
+            {result._fromCache && (
+              <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 6, padding: '8px 14px', fontSize: 11, color: '#1D4ED8', fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                📡 Données hors ligne — résultat depuis le cache local. Reconnectez-vous pour une vérification temps réel.
+              </div>
+            )}
             <StatutBanner statut={result.statut} />
+
+            {/* Alerte expiration proche */}
+            {result.statut === 'VALIDE' && result.joursRestants !== null && result.joursRestants >= 0 && result.joursRestants <= 180 && (
+              <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 6, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>⚠</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#92400E' }}>Document expirant bientôt</div>
+                  <div style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>
+                    Ce document expire dans <strong>{result.joursRestants} jour{result.joursRestants > 1 ? 's' : ''}</strong>. Pensez à le renouveler avant le {result.dateExpiration}.
+                  </div>
+                  <a href={`/renouvellement?id=${result.documentId}`} style={{ display: 'inline-block', marginTop: 8, padding: '5px 12px', background: '#D97706', color: '#fff', borderRadius: 5, fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
+                    Renouveler maintenant →
+                  </a>
+                </div>
+              </div>
+            )}
 
             {result.titulaire && (
               <div className="card" style={{ padding: 24, marginBottom: 14 }}>
@@ -161,7 +212,7 @@ function VerifContenu() {
                 <div className="rg-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
                   {[
                     { l: 'Bloc',      v: `#${result.blockchain.blockIndex}`, c: '#059669' },
-                    { l: 'Intégrité', v: result.blockchain.integrite ? '✓ Intact' : '✗ Altéré', c: result.blockchain.integrite ? '#059669' : '#DC2626' },
+                    { l: 'Intégrité', v: result.blockchain.integrite === null ? '— hors ligne' : result.blockchain.integrite ? '✓ Intact' : '✗ Altéré', c: result.blockchain.integrite === null ? '#94A3B8' : result.blockchain.integrite ? '#059669' : '#DC2626' },
                     { l: 'Ancré le',  v: new Date(result.blockchain.timestamp).toLocaleDateString('fr-FR'), c: '#0369A1' },
                   ].map(b => (
                     <div key={b.l} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 5, padding: '10px 12px' }}>

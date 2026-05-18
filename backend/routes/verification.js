@@ -4,8 +4,10 @@ const blockchainService = require('../services/blockchainService');
 
 function construireReponse(record) {
   const now = new Date();
-  const expiration = new Date(record.data.dateExpiration.split('/').reverse().join('-'));
-  const estExpire = expiration < now;
+  const [d, m, y] = (record.data.dateExpiration || '').split('/');
+  const expiration = y ? new Date(`${y}-${m}-${d}`) : null;
+  const estExpire  = expiration ? expiration < now : false;
+  const joursRestants = expiration ? Math.ceil((expiration - now) / (1000 * 60 * 60 * 24)) : null;
   const estRevoque = blockchainService.estRevoque(record.data.id);
 
   let statut = 'VALIDE';
@@ -25,6 +27,7 @@ function construireReponse(record) {
     },
     dateEmission: record.data.dateEmission,
     dateExpiration: record.data.dateExpiration,
+    joursRestants,
     renouvellementDe: record.data.renouvellementDe || null,
     blockchain: {
       hash: record.hash,
